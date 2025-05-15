@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'CalorieCam',
+  title: 'calorietracker.ai',
   description: 'Snap, Track, Thrive! Effortless calorie and nutrient tracking.',
 };
 

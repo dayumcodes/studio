@@ -136,7 +136,7 @@ export default function HomePage() {
         </div>
       </main>
       <footer className="py-6 text-center text-sm text-muted-foreground border-t border-border/60">
-        © {new Date().getFullYear()} CalorieCam. Snap, Track, Thrive!
+        © {new Date().getFullYear()} calorietracker.ai. Snap, Track, Thrive!
       </footer>
     </div>
   );
