@@ -21,10 +21,10 @@ const CalculateCaloriesInputSchema = z.object({
 export type CalculateCaloriesInput = z.infer<typeof CalculateCaloriesInputSchema>;
 
 const NutrientInfoSchema = z.object({
-  calories: z.number().describe('The number of calories in the food item.'),
-  protein: z.number().optional().describe('The amount of protein in grams.'),
-  fat: z.number().optional().describe('The amount of fat in grams.'),
-  carbohydrates: z.number().optional().describe('The amount of carbohydrates in grams.'),
+  calories: z.number().describe('The number of calories in the food item. This field is required and must be a number.'),
+  protein: z.number().describe('The amount of protein in grams. This field is required and must be a number.'),
+  fat: z.number().describe('The amount of fat in grams. This field is required and must be a number.'),
+  carbohydrates: z.number().describe('The amount of carbohydrates in grams. This field is required and must be a number.'),
 });
 
 const CalorieCalculationResultSchema = z.object({
@@ -65,7 +65,7 @@ const calculateCaloriesPrompt = ai.definePrompt({
   tools: [getFoodNutrients],
   input: {schema: CalculateCaloriesInputSchema},
   output: {schema: CalculateCaloriesOutputSchema},
-  prompt: `For each food item in the input list, use the getFoodNutrients tool to find its calorie and nutrient information. Return a list of objects, where each object contains the food item name and its nutrient information.
+  prompt: `For each food item in the input list, use the getFoodNutrients tool to find its calorie and nutrient information. Return a list of objects, where each object contains the food item name and its nutrient information. Ensure all fields in nutrientInfo (calories, protein, fat, carbohydrates) are populated with numbers.
 
 Food items:
 {{#each foodItems}}
