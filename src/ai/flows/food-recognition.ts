@@ -20,9 +20,10 @@ const RecognizeFoodInputSchema = z.object({
 export type RecognizeFoodInput = z.infer<typeof RecognizeFoodInputSchema>;
 
 const RecognizeFoodOutputSchema = z.object({
+  isFood: z.boolean().describe('Whether or not the input image contains food.'),
   foodItems: z
     .array(z.string())
-    .describe('A list of food items identified in the photo.'),
+    .describe('A list of food items identified in the photo. Should be empty if isFood is false.'),
 });
 export type RecognizeFoodOutput = z.infer<typeof RecognizeFoodOutputSchema>;
 
@@ -37,8 +38,9 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert food identifier.
 
 You will use this information to identify the food items in the photo.
-
-List the food items that you see in the photo. Enclose the list in brackets.
+First, determine if the image actually contains food. Set the 'isFood' field to true if it does, and false otherwise.
+If 'isFood' is true, list the food items that you see in the photo. Enclose the list in brackets.
+If 'isFood' is false, the 'foodItems' list must be empty.
 
 Photo: {{media url=photoDataUri}}`,
 });

@@ -44,17 +44,14 @@ export function FoodRecognitionForm({
     let activeStream: MediaStream | null = null;
 
     const requestCamera = async () => {
-      if (!videoRef.current && showCamera) { // Only proceed if videoRef is available and camera is shown
-          // This can happen if the component unmounts or showCamera becomes false rapidly.
-          // We might want to wait for videoRef.current to be set.
-          // For now, let's assume if showCamera is true, videoRef should become available.
+      if (!videoRef.current && showCamera) { 
           console.warn("Video ref not available yet for camera.")
           return; 
       }
 
       setIsLoadingStream(true);
       setError(null);
-      // setHasCameraPermission(null); // Reset before trying - causes flicker if already denied
+      // setHasCameraPermission(null); 
 
       try {
         const streamInstance = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
@@ -110,7 +107,6 @@ export function FoodRecognitionForm({
       if (activeStream) {
         activeStream.getTracks().forEach(track => track.stop());
       }
-      // Ensure state stream is also cleaned if different (e.g. rapid toggle)
       if (stream && stream !== activeStream) {
           stream.getTracks().forEach(track => track.stop());
       }
@@ -119,9 +115,9 @@ export function FoodRecognitionForm({
 
 
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
-    if (showCamera) setShowCamera(false); // Turn off camera if user uploads a file
+    if (showCamera) setShowCamera(false); 
     setError(null);
-    clearCurrentMeal(); // Clear any previous meal data
+    clearCurrentMeal(); 
 
     const file = event.target.files?.[0];
     if (file) {
@@ -142,25 +138,24 @@ export function FoodRecognitionForm({
       const video = videoRef.current;
       const canvas = canvasRef.current;
       
-      // Set canvas dimensions to video's intrinsic size for best quality
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       
       const context = canvas.getContext('2d');
       if (context) {
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUri = canvas.toDataURL('image/jpeg'); // Or 'image/png'
+        const dataUri = canvas.toDataURL('image/jpeg'); 
         setImagePreview(dataUri);
-        setImageFile(null); // Captured photo is a data URI, not a file object
-        setShowCamera(false); // This will trigger useEffect cleanup for the stream
-        clearCurrentMeal(); // Clear previous meal, new image captured
+        setImageFile(null); 
+        setShowCamera(false); 
+        clearCurrentMeal(); 
         setError(null);
       }
     }
   }, [stream, clearCurrentMeal]);
 
   const handleSubmit = async () => {
-    if (!imagePreview) { // imagePreview is the source of truth now
+    if (!imagePreview) { 
       setError("Please select an image or capture a photo first.");
       return;
     }
@@ -173,6 +168,14 @@ export function FoodRecognitionForm({
     try {
       const recognizeInput: RecognizeFoodInput = { photoDataUri: imagePreview };
       const recognitionResult: RecognizeFoodOutput = await recognizeFood(recognizeInput);
+      
+      if (!recognitionResult.isFood) {
+        const notFoodMessage = "The image does not appear to contain food. Please try a different image.";
+        setError(notFoodMessage);
+        onProcessingError(notFoodMessage);
+        setIsRecognizing(false);
+        return;
+      }
       
       setIsRecognizing(false);
       
@@ -213,7 +216,7 @@ export function FoodRecognitionForm({
         <CardDescription>Upload an image or use your camera to get calorie and nutrient information.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {error && !showCamera && ( // Only show general error if not in camera view (camera view has its own error display)
+        {error && !showCamera && ( 
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
@@ -231,7 +234,7 @@ export function FoodRecognitionForm({
               setError(null);
               clearCurrentMeal();
             }}
-            disabled={isLoading && showCamera} // disable if loading and camera is active
+            disabled={isLoading && showCamera} 
             className="flex-1"
           >
             <UploadCloud className="mr-2 h-5 w-5" /> Upload Image
@@ -246,7 +249,7 @@ export function FoodRecognitionForm({
               setError(null);
               clearCurrentMeal();
             }}
-            disabled={isLoading && !showCamera} // disable if loading and upload is active
+            disabled={isLoading && !showCamera} 
             className="flex-1"
           >
             <Camera className="mr-2 h-5 w-5" /> Use Camera
@@ -276,7 +279,7 @@ export function FoodRecognitionForm({
                     <p className="text-sm text-muted-foreground">Please enable camera permissions in your browser settings.</p>
                 </div>
               )}
-              {!isLoadingStream && !stream && hasCameraPermission !== false && ( // Initial state or other errors before stream active
+              {!isLoadingStream && !stream && hasCameraPermission !== false && ( 
                  <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground p-4 text-center">
                     <CameraOff className="h-12 w-12 mb-2" />
                     <p>Camera preview will appear here.</p>
@@ -342,5 +345,3 @@ export function FoodRecognitionForm({
     </Card>
   );
 }
-
-    
