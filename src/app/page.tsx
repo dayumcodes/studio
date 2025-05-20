@@ -1,23 +1,26 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { FoodRecognitionForm } from '@/components/food-recognition-form';
 import { FoodDisplay } from '@/components/food-display';
 import { CalorieHistory } from '@/components/calorie-history';
 import { AdSenseUnit } from '@/components/adsense-unit';
+import { CalorieProgressRing } from '@/components/calorie-progress-ring'; // Added import
 import useLocalStorage from '@/hooks/use-local-storage';
 import type { FoodItem, CalorieLogEntry } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { isToday, parseISO } from 'date-fns'; // Added imports
 
 const HISTORY_STORAGE_KEY = 'calorieCamHistory';
 
 // TODO: Replace with your actual AdSense IDs, preferably via environment variables
 const ADSENSE_CLIENT_ID = "ca-pub-XXXXXXXXXXXXXXXX"; 
 const ADSENSE_AD_SLOT_ID = "YYYYYYYYYY";
+const DAILY_GOAL_CALORIES = 2000; // Default daily goal
 
 export default function HomePage() {
   const [currentMealData, setCurrentMealData] = useState<FoodItem[] | null>(null);
@@ -83,7 +86,7 @@ export default function HomePage() {
       totalFat: totals.fat,
       totalCarbohydrates: totals.carbs,
     };
-    setHistory(prevHistory => [newEntry, ...prevHistory]); // Add to the beginning of the array for most recent first
+    setHistory(prevHistory => [newEntry, ...prevHistory]);
     toast({
       title: "Meal Logged!",
       description: `Successfully added ${totals.calories.toFixed(0)} calories to your history.`,
@@ -106,6 +109,14 @@ export default function HomePage() {
       description: "All your logged meals have been removed.",
     });
   };
+
+  const [consumedToday, setConsumedToday] = useState(0);
+
+  useEffect(() => {
+    const todayEntries = history.filter(entry => isToday(parseISO(entry.date)));
+    const totalConsumed = todayEntries.reduce((sum, entry) => sum + entry.totalCalories, 0);
+    setConsumedToday(totalConsumed);
+  }, [history]);
 
 
   return (
@@ -132,7 +143,12 @@ export default function HomePage() {
               onLogMeal={handleLogMeal}
             />
           </div>
-          <div className="lg:sticky lg:top-28 space-y-8"> {/* Adjusted top for sticky header */}
+          <div className="lg:sticky lg:top-28 space-y-8">
+            <CalorieProgressRing 
+              consumedCalories={consumedToday}
+              goalCalories={DAILY_GOAL_CALORIES}
+              className="mx-auto" // Center the ring if the column is wider
+            />
             <CalorieHistory 
               history={history} 
               onClearEntry={handleClearEntry} 
@@ -143,8 +159,8 @@ export default function HomePage() {
                 adClient={ADSENSE_CLIENT_ID}
                 adSlot={ADSENSE_AD_SLOT_ID}
                 className="mx-auto"
-                style={{ display: 'block', minHeight: '250px', textAlign: 'center' }} // Vertical ad unit suggestion
-                adFormat="auto" // Or "rectangle" if preferred for this slot
+                style={{ display: 'block', minHeight: '250px', textAlign: 'center' }}
+                adFormat="auto"
                 fullWidthResponsive={true}
                 data-ai-hint="advertisement banner"
               />
