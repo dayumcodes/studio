@@ -112,7 +112,7 @@ export function UserProfileSetupModal({ isOpen, onSave }: UserProfileSetupModalP
                   <FormItem>
                     <FormLabel>Age</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="Your age" {...field} />
+                      <Input type="number" placeholder="Your age" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -151,7 +151,7 @@ export function UserProfileSetupModal({ isOpen, onSave }: UserProfileSetupModalP
                   <FormItem>
                     <FormLabel>Weight (kg)</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="e.g., 70" {...field} step="0.1" />
+                      <Input type="number" placeholder="e.g., 70" {...field} step="0.1" value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -164,7 +164,7 @@ export function UserProfileSetupModal({ isOpen, onSave }: UserProfileSetupModalP
                   <FormItem>
                     <FormLabel>Height (cm)</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="e.g., 175" {...field} />
+                      <Input type="number" placeholder="e.g., 175" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
