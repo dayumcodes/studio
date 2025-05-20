@@ -6,17 +6,22 @@ import { AppHeader } from '@/components/layout/app-header';
 import { FoodRecognitionForm } from '@/components/food-recognition-form';
 import { FoodDisplay } from '@/components/food-display';
 import { CalorieHistory } from '@/components/calorie-history';
+import { AdSenseUnit } from '@/components/adsense-unit';
 import useLocalStorage from '@/hooks/use-local-storage';
 import type { FoodItem, CalorieLogEntry } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, Megaphone } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 
 const HISTORY_STORAGE_KEY = 'calorieCamHistory';
 
+// TODO: Replace with your actual AdSense IDs, preferably via environment variables
+const ADSENSE_CLIENT_ID = "ca-pub-XXXXXXXXXXXXXXXX"; 
+const ADSENSE_AD_SLOT_ID = "YYYYYYYYYY";
+
 export default function HomePage() {
   const [currentMealData, setCurrentMealData] = useState<FoodItem[] | null>(null);
-  const [isLoadingMeal, setIsLoadingMeal] = useState(false); // Combined loading state for form/display
+  const [isLoadingMeal, setIsLoadingMeal] = useState(false); 
   const [processingError, setProcessingError] = useState<string | null>(null);
 
   const [history, setHistory] = useLocalStorage<CalorieLogEntry[]>(HISTORY_STORAGE_KEY, []);
@@ -43,7 +48,7 @@ export default function HomePage() {
 
   const handleProcessingError = (message: string) => {
     setProcessingError(message);
-    setCurrentMealData(null); // Clear previous successful data on new error
+    setCurrentMealData(null);
     setIsLoadingMeal(false);
      if (message) {
        toast({
@@ -123,11 +128,11 @@ export default function HomePage() {
             )}
             <FoodDisplay 
               mealData={currentMealData} 
-              isLoading={isLoadingMeal && !currentMealData} // Show loading skeleton only if no data yet
+              isLoading={isLoadingMeal && !currentMealData} 
               onLogMeal={handleLogMeal}
             />
           </div>
-          <div className="lg:sticky lg:top-24"> {/* Sticky history for larger screens */}
+          <div className="lg:sticky lg:top-24"> 
             <CalorieHistory 
               history={history} 
               onClearEntry={handleClearEntry} 
@@ -135,18 +140,19 @@ export default function HomePage() {
             />
           </div>
         </div>
-        {/* Ad Placeholder */}
-        <div className="mt-12 mb-8 py-6 border-y border-border/60 flex flex-col items-center justify-center text-center bg-muted/30 rounded-lg shadow">
-          <Megaphone className="h-10 w-10 text-muted-foreground mb-3" />
-          <h3 className="text-lg font-semibold text-muted-foreground">Advertisement</h3>
-          <p className="text-sm text-muted-foreground/80">Your ad content could be here!</p>
-          <div 
-            className="mt-3 w-full max-w-2xl h-24 bg-gray-300/50 dark:bg-gray-700/50 rounded-md flex items-center justify-center text-gray-500 dark:text-gray-400 text-xs italic"
+        
+        <div className="mt-12 mb-8 py-6 border-y border-border/60 bg-muted/30 rounded-lg shadow">
+          <AdSenseUnit
+            adClient={ADSENSE_CLIENT_ID} // Replace with your AdSense Client ID
+            adSlot={ADSENSE_AD_SLOT_ID}   // Replace with your AdSense Ad Slot ID
+            className="mx-auto" // Center the ad unit
+            style={{ display: 'block', minHeight: '90px', textAlign: 'center' }} // Ensure it has some dimensions
+            adFormat="auto"
+            fullWidthResponsive={true}
             data-ai-hint="advertisement banner"
-          >
-            Ad Banner Placeholder (e.g., 728x90)
-          </div>
+          />
         </div>
+
       </main>
       <footer className="py-6 text-center text-sm text-muted-foreground border-t border-border/60">
         © {new Date().getFullYear()} calorietracker.ai. Snap, Track, Thrive!
