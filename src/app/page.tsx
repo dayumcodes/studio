@@ -8,7 +8,7 @@ import { FoodDisplay } from '@/components/food-display';
 import { CalorieHistory } from '@/components/calorie-history';
 import { AdSenseUnit } from '@/components/adsense-unit';
 import { CalorieProgressRing } from '@/components/calorie-progress-ring';
-import { CalorieGoalAdjuster } from '@/components/calorie-goal-adjuster'; // Added import
+import { CalorieGoalAdjuster } from '@/components/calorie-goal-adjuster';
 import useLocalStorage from '@/hooks/use-local-storage';
 import type { FoodItem, CalorieLogEntry } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
@@ -31,7 +31,6 @@ export default function HomePage() {
 
   const [history, setHistory] = useLocalStorage<CalorieLogEntry[]>(HISTORY_STORAGE_KEY, []);
   const [dailyGoalCalories, setDailyGoalCalories] = useLocalStorage<number>(GOAL_STORAGE_KEY, DEFAULT_DAILY_GOAL);
-  const [showGoalAdjuster, setShowGoalAdjuster] = useState(false);
   
   const { toast } = useToast();
 
@@ -123,34 +122,13 @@ export default function HomePage() {
     setConsumedToday(totalConsumed);
   }, [history]);
 
-  useEffect(() => {
-    // Show adjuster if in deficit and not already showing it, hide if goal met/exceeded
-    // Consider a threshold, e.g., show only if deficit > 100 kcal or 10% of goal
-    const deficit = dailyGoalCalories - consumedToday;
-    if (deficit > 0 && consumedToday < dailyGoalCalories) {
-      // Only show if not explicitly dismissed or if it's a new significant deficit
-      // For simplicity, now it just shows if there's a deficit.
-      // A more complex logic might involve tracking if user dismissed it for current deficit level.
-      setShowGoalAdjuster(true);
-    } else {
-      setShowGoalAdjuster(false);
-    }
-  }, [consumedToday, dailyGoalCalories]);
-
   const handleNewGoalSet = (newGoal: number) => {
     setDailyGoalCalories(newGoal);
-    setShowGoalAdjuster(false);
     toast({
       title: "Goal Updated!",
       description: `Your new daily calorie goal is ${newGoal.toFixed(0)} kcal.`,
       variant: "default"
     });
-  };
-
-  const handleDismissGoalAdjuster = () => {
-    setShowGoalAdjuster(false);
-    // Optionally, you could set a flag in localStorage to not show again today
-    // or until the deficit changes significantly.
   };
 
   return (
@@ -187,8 +165,6 @@ export default function HomePage() {
               consumedCalories={consumedToday}
               currentGoalCalories={dailyGoalCalories}
               onNewGoalSet={handleNewGoalSet}
-              onDismiss={handleDismissGoalAdjuster}
-              isVisible={showGoalAdjuster}
             />
             <CalorieHistory 
               history={history} 
