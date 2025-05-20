@@ -53,7 +53,7 @@ export function CalorieProgressRing({
       aria-valuenow={displayConsumedCalories}
       aria-valuemin={0}
       aria-valuemax={goalCalories}
-      aria-label={`Calorie consumption: ${Math.round(displayConsumedCalories)} of ${goalCalories} kcal`}
+      aria-label={`Calorie consumption: approx. ${Math.round(displayConsumedCalories)} of ${goalCalories} kcal`}
     >
       <svg
         width={size}
@@ -91,7 +91,7 @@ export function CalorieProgressRing({
           className="font-bold text-foreground"
           style={{ fontSize: Math.max(16, size / 5.5), lineHeight: '1.1' }} // Ensure minimum font size
         >
-          {Math.round(displayConsumedCalories)}
+          ~{Math.round(displayConsumedCalories)}
         </span>
         <span
           className="text-muted-foreground"

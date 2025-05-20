@@ -28,7 +28,6 @@ interface CalorieHistoryProps {
 
 export function CalorieHistory({ history, onClearEntry, onClearAllHistory }: CalorieHistoryProps) {
   
-  // The history is now pre-sorted in page.tsx, but sorting again doesn't hurt
   const sortedHistory = [...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
@@ -39,7 +38,7 @@ export function CalorieHistory({ history, onClearEntry, onClearAllHistory }: Cal
             <History className="h-8 w-8 text-primary" />
             Meal Log
           </CardTitle>
-          <CardDescription>Your journey of tracked meals and nutrients.</CardDescription>
+          <CardDescription>Your journey of tracked meals (values are approximate).</CardDescription>
         </div>
         {history.length > 0 && (
           <AlertDialog>
@@ -86,7 +85,7 @@ export function CalorieHistory({ history, onClearEntry, onClearAllHistory }: Cal
                          {format(new Date(entry.date), "MMM d, yyyy - h:mm a")}
                       </CardTitle>
                       <Badge variant="secondary" className="mt-1">
-                        <Zap size={14} className="mr-1 text-primary" /> {entry.totalCalories.toFixed(0)} Calories
+                        <Zap size={14} className="mr-1 text-primary" /> ~{entry.totalCalories.toFixed(0)} Calories
                       </Badge>
                     </div>
                     <AlertDialog>
@@ -133,14 +132,14 @@ export function CalorieHistory({ history, onClearEntry, onClearAllHistory }: Cal
                                 <Apple size={14} className="text-primary/70"/>
                                 {item.name}
                               </span>
-                              <Badge variant="outline">{item.nutrientInfo.calories.toFixed(0)} kcal</Badge>
+                              <Badge variant="outline">~{item.nutrientInfo.calories.toFixed(0)} kcal</Badge>
                             </li>
                           ))}
                         </ul>
                         <div className="grid grid-cols-3 gap-2 pt-2 text-xs text-muted-foreground border-t border-border/50">
-                          <p>Protein: <span className="font-semibold text-foreground/80">{entry.totalProtein.toFixed(1)}g</span></p>
-                          <p>Fat: <span className="font-semibold text-foreground/80">{entry.totalFat.toFixed(1)}g</span></p>
-                          <p>Carbs: <span className="font-semibold text-foreground/80">{entry.totalCarbohydrates.toFixed(1)}g</span></p>
+                          <p>Protein: <span className="font-semibold text-foreground/80">~{entry.totalProtein.toFixed(0)}g</span></p>
+                          <p>Fat: <span className="font-semibold text-foreground/80">~{entry.totalFat.toFixed(0)}g</span></p>
+                          <p>Carbs: <span className="font-semibold text-foreground/80">~{entry.totalCarbohydrates.toFixed(0)}g</span></p>
                         </div>
                       </div>
                     </details>

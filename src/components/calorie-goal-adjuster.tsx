@@ -100,9 +100,9 @@ export function CalorieGoalAdjuster({
               Current Status
             </AlertTitle>
             <AlertDescription className="text-xs space-y-0.5 mt-1 text-muted-foreground">
-              <p>Consumed: <span className="font-semibold text-foreground">{consumedCalories.toFixed(0)}</span> kcal</p>
+              <p>Consumed: <span className="font-semibold text-foreground">~{consumedCalories.toFixed(0)}</span> kcal</p>
               <p>Goal: <span className="font-semibold text-foreground">{currentGoalCalories.toFixed(0)}</span> kcal</p>
-              <p>Deficit: <strong className="text-orange-600 dark:text-orange-400">{deficit.toFixed(0)} kcal</strong></p>
+              <p>Deficit: <strong className="text-orange-600 dark:text-orange-400">~{deficit.toFixed(0)} kcal</strong></p>
             </AlertDescription>
           </Alert>
         )}
@@ -116,7 +116,7 @@ export function CalorieGoalAdjuster({
             </p>
           ) : (
              <p className="text-sm text-muted-foreground">
-              Consumed: <span className="font-semibold text-foreground">{consumedCalories.toFixed(0)}</span> kcal / <span className="font-semibold text-foreground">{currentGoalCalories.toFixed(0)}</span> kcal goal.
+              Consumed: <span className="font-semibold text-foreground">~{consumedCalories.toFixed(0)}</span> kcal / <span className="font-semibold text-foreground">{currentGoalCalories.toFixed(0)}</span> kcal goal.
             </p>
           )}
           <div className="space-y-1.5">
