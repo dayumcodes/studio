@@ -31,11 +31,13 @@ interface GroupedHistoryEntry {
 }
 
 export default function ProfilePage() {
-  const [userProfile, setUserProfile] = useLocalStorage<UserProfile | null>(USER_PROFILE_STORAGE_KEY, null);
-  const [history, setHistory] = useLocalStorage<CalorieLogEntry[]>(HISTORY_STORAGE_KEY, []);
+  const [userProfile, setUserProfile, isProfileInitialized] = useLocalStorage<UserProfile | null>(USER_PROFILE_STORAGE_KEY, null);
+  const [history, setHistory, isHistoryInitialized] = useLocalStorage<CalorieLogEntry[]>(HISTORY_STORAGE_KEY, []);
   const [groupedHistory, setGroupedHistory] = useState<GroupedHistoryEntry[]>([]);
 
   useEffect(() => {
+    if (!isHistoryInitialized) return;
+
     const groups: Record<string, GroupedHistoryEntry> = {};
     
     // Sort history by date descending before grouping to ensure meals within a day are ordered if needed
@@ -72,24 +74,34 @@ export default function ProfilePage() {
     const sortedGroups = Object.values(groups).sort((a, b) => b.date.getTime() - a.date.getTime());
     setGroupedHistory(sortedGroups);
 
-  }, [history]);
+  }, [history, isHistoryInitialized]);
 
 
-  if (!userProfile) {
+  if (!isProfileInitialized || !userProfile) { // Wait for initialization
     return (
       <div className="flex flex-col min-h-screen bg-background font-sans">
         <AppHeader />
         <main className="flex-grow container mx-auto px-4 py-8 flex flex-col items-center justify-center">
-          <Alert variant="default" className="max-w-md text-center shadow-lg">
-            <UserCircle className="h-5 w-5" />
-            <AlertTitle>Profile Not Found</AlertTitle>
-            <AlertDescription>
-              Please set up your profile on the homepage to view this section.
-            </AlertDescription>
-             <Link href="/" className="mt-4 inline-block">
-                <Button variant="outline">Go to Homepage</Button>
-            </Link>
-          </Alert>
+          {!isProfileInitialized ? (
+             <Alert variant="default" className="max-w-md text-center shadow-lg">
+                <UserCircle className="h-5 w-5 animate-pulse" />
+                <AlertTitle>Loading Profile...</AlertTitle>
+                <AlertDescription>
+                  Please wait while we fetch your profile information.
+                </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert variant="default" className="max-w-md text-center shadow-lg">
+              <UserCircle className="h-5 w-5" />
+              <AlertTitle>Profile Not Found</AlertTitle>
+              <AlertDescription>
+                Please set up your profile on the homepage to view this section.
+              </AlertDescription>
+               <Link href="/" className="mt-4 inline-block">
+                  <Button variant="outline">Go to Homepage</Button>
+              </Link>
+            </Alert>
+          )}
         </main>
          <footer className="py-6 text-center text-sm text-muted-foreground border-t border-border/60 bg-card mt-auto">
           © {new Date().getFullYear()} calorietracker.ai. Snap, Track, Thrive!
@@ -154,15 +166,20 @@ export default function ProfilePage() {
                     </div>
                 </div>
             </CardHeader>
-            <CardContent className="p-0">
-              {groupedHistory.length === 0 ? (
+            <CardContent className="p-0 flex flex-col"> {/* Modified: Added flex flex-col */}
+              {!isHistoryInitialized ? (
+                 <div className="py-10 px-5 text-center text-muted-foreground">
+                  <ListChecks className="h-12 w-12 mx-auto mb-3 text-muted-foreground/70 animate-pulse" />
+                  <p className="font-medium">Loading Meal History...</p>
+                </div>
+              ) : groupedHistory.length === 0 ? (
                 <div className="py-10 px-5 text-center text-muted-foreground">
                   <Utensils className="h-12 w-12 mx-auto mb-3 text-muted-foreground/70" />
                   <p className="font-medium">No meal history yet.</p>
                   <p className="text-sm">Start tracking your meals on the homepage!</p>
                 </div>
               ) : (
-                <ScrollArea className="max-h-[70vh]">
+                <ScrollArea className="max-h-[70vh] flex-1 min-h-0"> {/* Modified: Added flex-1 min-h-0 */}
                   <Accordion type="multiple" className="w-full">
                     {groupedHistory.map((group, index) => (
                       <AccordionItem value={`day-${index}`} key={`day-${index}`} className="border-b last:border-b-0">
@@ -200,7 +217,7 @@ export default function ProfilePage() {
                                 </CardHeader>
                                 <CardContent className="p-3 md:p-4 text-xs">
                                   <p className="font-medium text-foreground mb-1.5">Items ({entry.mealItems.length}):</p>
-                                  <ul className="space-y-1 list-inside list-disc pl-1 marker:text-primary/70">
+                                  <ul className="space-y-1 list-inside list-disc pl-1 marker:text-primary/70 max-h-40 overflow-y-auto pr-2">
                                     {entry.mealItems.map((item, itemIndex) => (
                                       <li key={itemIndex} className="capitalize text-muted-foreground">
                                         {item.name} (~{item.nutrientInfo.calories.toFixed(0)} kcal)
@@ -256,3 +273,6 @@ const PROFILE_SETUP_COMPLETE_KEY = 'calorieCamProfileSetupComplete';
 //   other: "Other",
 //   prefer_not_to_say: "Prefer not to say",
 // };
+
+
+    
