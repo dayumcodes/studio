@@ -80,7 +80,7 @@ export function CalorieHistory({ history, onClearEntry, onClearAllHistory }: Cal
             </p>
           </div>
         ) : (
-          <ScrollArea className="h-[calc(100vh-24rem)] md:h-[30rem] lg:h-[calc(100vh-28rem)]"> 
+          <ScrollArea className="max-h-[25rem]"> 
             <div className="space-y-0">
               {sortedHistory.map((entry) => (
                 <Card key={entry.id} className="bg-card rounded-none border-b last:border-b-0 hover:bg-muted/20 transition-colors duration-150 ease-in-out">

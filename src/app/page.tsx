@@ -160,14 +160,14 @@ export default function HomePage() {
   return (
     <div className="flex flex-col min-h-screen bg-background font-sans">
       <AppHeader />
-      <main className="flex-grow container mx-auto px-4 py-6 md:py-8">
+      <main className="flex-grow container mx-auto px-4 py-4 md:py-6">
         <UserProfileSetupModal 
           isOpen={isProfileModalOpen} 
           onSave={handleSaveProfile} 
         />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 items-start">
           {/* Main content column */}
-          <div className="lg:col-span-2 space-y-6 md:space-y-8">
+          <div className="lg:col-span-2 space-y-4 md:space-y-6">
             <FoodRecognitionForm 
               onMealDataProcessed={handleMealDataProcessed} 
               onProcessingError={handleProcessingError}
@@ -188,7 +188,7 @@ export default function HomePage() {
           </div>
 
           {/* Sticky sidebar column */}
-          <div className="lg:sticky lg:top-24 space-y-6 md:space-y-8"> {/* Adjusted top for sticky header */}
+          <div className="lg:sticky lg:top-24 space-y-4 md:space-y-6"> {/* Adjusted top for sticky header */}
             <CalorieProgressRing 
               consumedCalories={consumedToday}
               goalCalories={dailyGoalCalories}
@@ -205,7 +205,7 @@ export default function HomePage() {
               onClearEntry={handleClearEntry} 
               onClearAllHistory={handleClearAllHistory} 
             />
-             <div className="mt-8 py-4">
+             <div className="mt-6 py-3">
               <AdSenseUnit
                 adClient={ADSENSE_CLIENT_ID}
                 adSlot={ADSENSE_AD_SLOT_ID}
