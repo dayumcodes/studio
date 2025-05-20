@@ -83,7 +83,7 @@ export default function HomePage() {
       totalFat: totals.fat,
       totalCarbohydrates: totals.carbs,
     };
-    setHistory(prevHistory => [...prevHistory, newEntry]);
+    setHistory(prevHistory => [newEntry, ...prevHistory]); // Add to the beginning of the array for most recent first
     toast({
       title: "Meal Logged!",
       description: `Successfully added ${totals.calories.toFixed(0)} calories to your history.`,
@@ -109,11 +109,11 @@ export default function HomePage() {
 
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="flex flex-col min-h-screen bg-background font-sans">
       <AppHeader />
       <main className="flex-grow container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          <div className="space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          <div className="lg:col-span-2 space-y-8">
             <FoodRecognitionForm 
               onMealDataProcessed={handleMealDataProcessed} 
               onProcessingError={handleProcessingError}
@@ -132,29 +132,28 @@ export default function HomePage() {
               onLogMeal={handleLogMeal}
             />
           </div>
-          <div className="lg:sticky lg:top-24"> 
+          <div className="lg:sticky lg:top-28 space-y-8"> {/* Adjusted top for sticky header */}
             <CalorieHistory 
               history={history} 
               onClearEntry={handleClearEntry} 
               onClearAllHistory={handleClearAllHistory} 
             />
+             <div className="mt-8 py-6">
+              <AdSenseUnit
+                adClient={ADSENSE_CLIENT_ID}
+                adSlot={ADSENSE_AD_SLOT_ID}
+                className="mx-auto"
+                style={{ display: 'block', minHeight: '250px', textAlign: 'center' }} // Vertical ad unit suggestion
+                adFormat="auto" // Or "rectangle" if preferred for this slot
+                fullWidthResponsive={true}
+                data-ai-hint="advertisement banner"
+              />
+            </div>
           </div>
         </div>
         
-        <div className="mt-12 mb-8 py-6 border-y border-border/60 bg-muted/30 rounded-lg shadow">
-          <AdSenseUnit
-            adClient={ADSENSE_CLIENT_ID} // Replace with your AdSense Client ID
-            adSlot={ADSENSE_AD_SLOT_ID}   // Replace with your AdSense Ad Slot ID
-            className="mx-auto" // Center the ad unit
-            style={{ display: 'block', minHeight: '90px', textAlign: 'center' }} // Ensure it has some dimensions
-            adFormat="auto"
-            fullWidthResponsive={true}
-            data-ai-hint="advertisement banner"
-          />
-        </div>
-
       </main>
-      <footer className="py-6 text-center text-sm text-muted-foreground border-t border-border/60">
+      <footer className="py-6 text-center text-sm text-muted-foreground border-t border-border/60 bg-card">
         © {new Date().getFullYear()} calorietracker.ai. Snap, Track, Thrive!
       </footer>
     </div>

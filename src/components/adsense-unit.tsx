@@ -1,8 +1,11 @@
 
 "use client";
 
+import * as React from 'react'; // Added this line
 import type { CSSProperties } from 'react';
 import { useEffect, useRef } from 'react';
+import { cn } from '@/lib/utils'; // Ensure cn is imported
+import { ImageOff } from 'lucide-react';
 
 interface AdSenseUnitProps {
   adClient: string; // e.g., "ca-pub-XXXXXXXXXXXXXXXX"
@@ -30,29 +33,40 @@ export function AdSenseUnit({
   fullWidthResponsive = true,
 }: AdSenseUnitProps) {
   const adRef = useRef<HTMLModElement>(null);
+  const [isConfigured, setIsConfigured] = React.useState(false);
 
   useEffect(() => {
-    try {
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-    } catch (err) {
-      console.error("AdSense error:", err);
+    if (adClient && adSlot && adClient !== "ca-pub-XXXXXXXXXXXXXXXX" && adSlot !== "YYYYYYYYYY") {
+      setIsConfigured(true);
+      try {
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+      } catch (err) {
+        console.error("AdSense error:", err);
+      }
+    } else {
+      setIsConfigured(false);
+      console.warn("AdSenseUnit: Using placeholder adClient or adSlot. Replace with your actual IDs for ads to display.");
     }
-  }, []);
+  }, [adClient, adSlot]);
 
-  // Ensure adClient and adSlot are provided, otherwise render nothing or a placeholder
-  if (!adClient || !adSlot) {
+  if (!isConfigured) {
     return (
-      <div className={cn("bg-muted/30 text-muted-foreground p-4 text-center rounded-md", className)} style={style}>
-        Ad unit not configured (missing client or slot ID).
+      <div
+        className={cn(
+          "bg-muted/40 text-muted-foreground p-6 text-center rounded-lg border border-dashed border-border",
+          "flex flex-col items-center justify-center aspect-video max-h-[250px] min-h-[100px]", // Ensure it has some dimensions
+          className
+        )}
+        style={style}
+        role="complementary"
+        aria-label="Advertisement Placeholder"
+      >
+        <ImageOff className="w-12 h-12 mb-2 text-muted-foreground/70" />
+        <p className="font-medium">Advertisement Area</p>
+        <p className="text-xs">Ad unit not fully configured.</p>
       </div>
     );
   }
-  
-  // Basic validation for placeholder IDs
-  if (adClient === "ca-pub-XXXXXXXXXXXXXXXX" || adSlot === "YYYYYYYYYY") {
-     console.warn("AdSenseUnit: Using placeholder adClient or adSlot. Replace with your actual IDs.");
-  }
-
 
   return (
     <ins
@@ -67,10 +81,4 @@ export function AdSenseUnit({
       aria-label="Advertisement"
     ></ins>
   );
-}
-
-// Helper for cn if not already available globally in this component's context
-// In a real app, this would likely come from "@/lib/utils"
-function cn(...inputs: (string | undefined | null | boolean)[]) {
-  return inputs.filter(Boolean).join(' ');
 }
