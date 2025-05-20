@@ -33,3 +33,17 @@ export interface UserProfile {
   heightCm: number; // Height in centimeters
   activityLevel: ActivityLevel;
 }
+
+// Labels for UI display
+export const activityLevelLabels: Record<ActivityLevel, string> = {
+  sedentary: "Sedentary (little/no exercise)",
+  lightly_active: "Lightly active (1-3 days/wk)",
+  moderately_active: "Moderately active (3-5 days/wk)",
+  very_active: "Very active (6-7 days/wk)",
+};
+
+export const genderLabels: Record<Gender, string> = {
+  male: "Male",
+  female: "Female",
+  prefer_not_to_say: "Prefer not to say",
+};

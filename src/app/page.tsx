@@ -16,17 +16,16 @@ import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { isToday, parseISO } from 'date-fns';
+import { 
+  HISTORY_STORAGE_KEY, 
+  GOAL_STORAGE_KEY, 
+  USER_PROFILE_STORAGE_KEY, 
+  PROFILE_SETUP_COMPLETE_KEY,
+  DEFAULT_DAILY_GOAL,
+  ADSENSE_CLIENT_ID,
+  ADSENSE_AD_SLOT_ID
+} from '@/lib/constants';
 
-const HISTORY_STORAGE_KEY = 'calorieCamHistory';
-const GOAL_STORAGE_KEY = 'calorieCamGoal';
-const USER_PROFILE_STORAGE_KEY = 'calorieCamUserProfile';
-const PROFILE_SETUP_COMPLETE_KEY = 'calorieCamProfileSetupComplete';
-
-const DEFAULT_DAILY_GOAL = 2000;
-
-// TODO: Replace with your actual AdSense IDs, preferably via environment variables
-const ADSENSE_CLIENT_ID = "ca-pub-XXXXXXXXXXXXXXXX"; 
-const ADSENSE_AD_SLOT_ID = "YYYYYYYYYY";
 
 export default function HomePage() {
   const [currentMealData, setCurrentMealData] = useState<FoodItem[] | null>(null);
