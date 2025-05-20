@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -9,7 +10,7 @@ import useLocalStorage from '@/hooks/use-local-storage';
 import type { FoodItem, CalorieLogEntry } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Megaphone } from "lucide-react";
 
 const HISTORY_STORAGE_KEY = 'calorieCamHistory';
 
@@ -132,6 +133,18 @@ export default function HomePage() {
               onClearEntry={handleClearEntry} 
               onClearAllHistory={handleClearAllHistory} 
             />
+          </div>
+        </div>
+        {/* Ad Placeholder */}
+        <div className="mt-12 mb-8 py-6 border-y border-border/60 flex flex-col items-center justify-center text-center bg-muted/30 rounded-lg shadow">
+          <Megaphone className="h-10 w-10 text-muted-foreground mb-3" />
+          <h3 className="text-lg font-semibold text-muted-foreground">Advertisement</h3>
+          <p className="text-sm text-muted-foreground/80">Your ad content could be here!</p>
+          <div 
+            className="mt-3 w-full max-w-2xl h-24 bg-gray-300/50 dark:bg-gray-700/50 rounded-md flex items-center justify-center text-gray-500 dark:text-gray-400 text-xs italic"
+            data-ai-hint="advertisement banner"
+          >
+            Ad Banner Placeholder (e.g., 728x90)
           </div>
         </div>
       </main>
