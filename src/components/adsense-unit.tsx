@@ -1,20 +1,21 @@
 
 "use client";
 
-import * as React from 'react'; // Added this line
+import * as React from 'react'; 
 import type { CSSProperties } from 'react';
 import { useEffect, useRef } from 'react';
-import { cn } from '@/lib/utils'; // Ensure cn is imported
-import { ImageOff } from 'lucide-react';
+import { cn } from '@/lib/utils'; 
+import { ImageOff, AlertTriangle } from 'lucide-react'; // Added AlertTriangle
 
 interface AdSenseUnitProps {
-  adClient: string; // e.g., "ca-pub-XXXXXXXXXXXXXXXX"
-  adSlot: string; // e.g., "YYYYYYYYYY"
-  adFormat?: string; // e.g., "auto", "rectangle", "vertical", "horizontal"
+  adClient: string; 
+  adSlot: string; 
+  adFormat?: string; 
   style?: CSSProperties;
   className?: string;
-  adLayoutKey?: string; // For responsive ads, e.g., "-gw-2x1-2x3"
+  adLayoutKey?: string; 
   fullWidthResponsive?: boolean;
+  "data-ai-hint"?: string; // For the main wrapper if needed
 }
 
 declare global {
@@ -31,39 +32,56 @@ export function AdSenseUnit({
   className,
   adLayoutKey,
   fullWidthResponsive = true,
+  "data-ai-hint": dataAiHint,
 }: AdSenseUnitProps) {
-  const adRef = useRef<HTMLModElement>(null);
+  const adRef = useRef<HTMLModElement>(null); // HTMLModElement is for <ins>
   const [isConfigured, setIsConfigured] = React.useState(false);
+  const [loadError, setLoadError] = React.useState(false);
 
   useEffect(() => {
     if (adClient && adSlot && adClient !== "ca-pub-XXXXXXXXXXXXXXXX" && adSlot !== "YYYYYYYYYY") {
       setIsConfigured(true);
+      setLoadError(false); // Reset error on re-configure
       try {
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
+        // Ensure adsbygoogle array exists
+        window.adsbygoogle = window.adsbygoogle || [];
+        window.adsbygoogle.push({});
       } catch (err) {
-        console.error("AdSense error:", err);
+        console.error("AdSense push error:", err);
+        setLoadError(true);
       }
     } else {
       setIsConfigured(false);
-      console.warn("AdSenseUnit: Using placeholder adClient or adSlot. Replace with your actual IDs for ads to display.");
+      // No console.warn needed here as the placeholder will be visible
     }
-  }, [adClient, adSlot]);
+  }, [adClient, adSlot, adFormat, adLayoutKey, fullWidthResponsive]); // Re-run if any of these change
 
-  if (!isConfigured) {
+  if (!isConfigured || loadError) {
     return (
       <div
         className={cn(
           "bg-muted/40 text-muted-foreground p-6 text-center rounded-lg border border-dashed border-border",
-          "flex flex-col items-center justify-center aspect-video max-h-[250px] min-h-[100px]", // Ensure it has some dimensions
+          "flex flex-col items-center justify-center min-h-[150px] max-h-[250px]", 
           className
         )}
-        style={style}
+        style={style} // Apply passed style to placeholder too
         role="complementary"
         aria-label="Advertisement Placeholder"
+        data-ai-hint={dataAiHint || "advertisement placeholder"}
       >
-        <ImageOff className="w-12 h-12 mb-2 text-muted-foreground/70" />
-        <p className="font-medium">Advertisement Area</p>
-        <p className="text-xs">Ad unit not fully configured.</p>
+        {loadError ? (
+           <AlertTriangle className="w-12 h-12 mb-2 text-destructive" />
+        ) : (
+           <ImageOff className="w-12 h-12 mb-2 text-muted-foreground/70" />
+        )}
+        <p className="font-medium text-sm">
+          {loadError ? "Ad Load Error" : "Advertisement Area"}
+        </p>
+        <p className="text-xs mt-1">
+          {loadError 
+            ? "There was an issue loading the ad." 
+            : "Ad unit not configured or Ad Blocker active."}
+        </p>
       </div>
     );
   }
@@ -79,6 +97,7 @@ export function AdSenseUnit({
       data-ad-layout-key={adLayoutKey}
       data-full-width-responsive={fullWidthResponsive ? "true" : undefined}
       aria-label="Advertisement"
+      data-ai-hint={dataAiHint} // Pass through ai-hint
     ></ins>
   );
 }

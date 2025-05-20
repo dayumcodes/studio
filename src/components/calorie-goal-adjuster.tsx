@@ -36,6 +36,7 @@ export function CalorieGoalAdjuster({
     if (!isNaN(goalValue) && goalValue >= 0) {
       onNewGoalSet(goalValue);
     } else {
+      // Potentially add a toast error here
       console.error("Invalid goal value entered.");
     }
   };
@@ -52,22 +53,22 @@ export function CalorieGoalAdjuster({
 
   return (
     <Card className={cn(
-        "w-full max-w-md mx-auto shadow-lg rounded-xl",
+        "w-full max-w-md mx-auto shadow-lg rounded-xl", // Kept rounded-xl
         isInDeficit 
-          ? "border-orange-400/60 bg-orange-50/70 dark:border-orange-600/50 dark:bg-orange-900/20"
+          ? "border-chart-3/60 bg-orange-50/70 dark:border-chart-3/50 dark:bg-orange-900/20" // Use chart-3 for orange
           : "border-border bg-card"
       )}
     >
-      <CardHeader className="pb-3 pt-5">
+      <CardHeader className="pb-3 pt-5 px-4 md:px-5">
         <div className="flex items-center gap-2.5">
           <div className={cn(
-            "p-2 rounded-full",
+            "p-2.5 rounded-full", // Slightly larger padding for icon
             isInDeficit 
-              ? "bg-orange-100 dark:bg-orange-500/20" 
+              ? "bg-chart-3/10 dark:bg-chart-3/20" 
               : "bg-primary/10 dark:bg-primary/20"
           )}>
             {isInDeficit ? (
-              <AlertTriangle className="h-6 w-6 text-orange-500 dark:text-orange-400" />
+              <AlertTriangle className="h-6 w-6 text-chart-3 dark:text-chart-3" />
             ) : (
               <Target className="h-6 w-6 text-primary" />
             )}
@@ -76,10 +77,10 @@ export function CalorieGoalAdjuster({
             <CardTitle className={cn(
               "text-lg font-semibold",
               isInDeficit 
-                ? "text-orange-700 dark:text-orange-300" 
+                ? "text-orange-700 dark:text-orange-300" // Keeping specific orange for text for now
                 : "text-foreground"
             )}>
-              {isInDeficit ? "Calorie Deficit Alert" : "Adjust Daily Goal"}
+              {isInDeficit ? "Calorie Deficit" : "Adjust Daily Goal"}
             </CardTitle>
             <CardDescription className={cn(
               "text-xs",
@@ -87,41 +88,37 @@ export function CalorieGoalAdjuster({
                 ? "text-orange-600 dark:text-orange-400/80" 
                 : "text-muted-foreground"
             )}>
-              {isInDeficit ? "You're currently under your daily goal." : "Manage your daily calorie target."}
+              {isInDeficit ? `You're ~${deficit.toFixed(0)} kcal under your goal.` : "Manage your daily calorie target."}
             </CardDescription>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4 pt-2 pb-5">
+      <CardContent className="space-y-4 pt-2 pb-5 px-4 md:px-5">
         {isInDeficit && (
-          <Alert variant="default" className="bg-background/70 border-border shadow-sm">
-            <TrendingDown className="h-4 w-4 text-orange-500" />
+          <Alert variant="default" className="bg-background/70 border-border shadow-sm rounded-md">
+            <TrendingDown className="h-4 w-4 text-chart-3" />
             <AlertTitle className="text-sm font-medium text-foreground">
               Current Status
             </AlertTitle>
             <AlertDescription className="text-xs space-y-0.5 mt-1 text-muted-foreground">
               <p>Consumed: <span className="font-semibold text-foreground">~{consumedCalories.toFixed(0)}</span> kcal</p>
               <p>Goal: <span className="font-semibold text-foreground">{currentGoalCalories.toFixed(0)}</span> kcal</p>
-              <p>Deficit: <strong className="text-orange-600 dark:text-orange-400">~{deficit.toFixed(0)} kcal</strong></p>
+              <p>Deficit: <strong className="text-chart-3 dark:text-chart-3">~{deficit.toFixed(0)} kcal</strong></p>
             </AlertDescription>
           </Alert>
         )}
         
-        {isInDeficit && <Separator className="my-3 bg-orange-200 dark:bg-orange-700/50" />}
+        {isInDeficit && <Separator className="my-3 bg-chart-3/20 dark:bg-chart-3/50" />}
 
         <div className="space-y-3">
-          {isInDeficit ? (
-             <p className="text-sm text-foreground">
-              Need more energy today? You can adjust your calorie goal.
-            </p>
-          ) : (
+          {!isInDeficit && (
              <p className="text-sm text-muted-foreground">
               Consumed: <span className="font-semibold text-foreground">~{consumedCalories.toFixed(0)}</span> kcal / <span className="font-semibold text-foreground">{currentGoalCalories.toFixed(0)}</span> kcal goal.
             </p>
           )}
           <div className="space-y-1.5">
             <Label htmlFor="new-calorie-goal" className="text-xs font-medium text-muted-foreground">
-              Set New Daily Goal (kcal)
+              {isInDeficit ? "Set New Target (kcal)" : "New Daily Goal (kcal)"}
             </Label>
             <Input
               id="new-calorie-goal"
@@ -130,7 +127,7 @@ export function CalorieGoalAdjuster({
               onChange={(e) => setNewGoal(e.target.value)}
               placeholder="e.g., 2200"
               min="0"
-              className="text-base h-11 focus:border-primary"
+              className="text-base h-11 focus:border-primary rounded-md"
             />
           </div>
         </div>
@@ -141,7 +138,7 @@ export function CalorieGoalAdjuster({
             <Button 
               variant="outline" 
               size="sm" 
-              className="text-xs h-9 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary hover:border-primary"
+              className="text-xs h-9 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary hover:border-primary rounded-md"
               onClick={() => handlePresetClick(100)}
             >
               <PlusCircle size={14} className="mr-1" /> +100
@@ -149,7 +146,7 @@ export function CalorieGoalAdjuster({
             <Button 
               variant="outline" 
               size="sm" 
-              className="text-xs h-9 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary hover:border-primary"
+              className="text-xs h-9 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary hover:border-primary rounded-md"
               onClick={() => handlePresetClick(250)}
             >
               <PlusCircle size={14} className="mr-1" /> +250
@@ -157,19 +154,19 @@ export function CalorieGoalAdjuster({
             <Button 
               variant="outline" 
               size="sm" 
-              className="text-xs h-9 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary hover:border-primary"
+              className="text-xs h-9 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary hover:border-primary rounded-md"
               onClick={() => handlePresetClick(undefined, true)}
-              disabled={consumedCalories === 0} // Disable if no intake to match
+              disabled={consumedCalories === 0} 
             >
               Match Intake
             </Button>
           </div>
         </div>
       </CardContent>
-      <CardFooter className="pt-2 pb-5">
+      <CardFooter className="pt-2 pb-5 px-4 md:px-5">
         <Button 
             onClick={handleSetGoal} 
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-11 text-sm font-semibold"
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-11 text-sm font-semibold rounded-md"
             disabled={parseInt(newGoal, 10) === currentGoalCalories || isNaN(parseInt(newGoal, 10)) || parseInt(newGoal, 10) < 0}
         >
           <Target size={16} className="mr-2" /> Set New Goal

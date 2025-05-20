@@ -43,7 +43,6 @@ export default function HomePage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Open modal if setup isn't complete. This runs once on mount if `hasCompletedProfileSetup` is false.
     if (!hasCompletedProfileSetup) {
       setIsProfileModalOpen(true);
     }
@@ -58,7 +57,6 @@ export default function HomePage() {
       description: "Your information has been successfully saved. Welcome!",
       variant: "default",
     });
-     // Potentially set a default calorie goal based on profile here in the future
   };
 
   const handleMealDataProcessed = (data: FoodItem[]) => {
@@ -74,7 +72,7 @@ export default function HomePage() {
     } else {
        toast({
         title: "No food found",
-        description: "We couldn't identify any food in the image.",
+        description: "We couldn't identify any food items in the image.",
         variant: "destructive",
       });
     }
@@ -82,9 +80,9 @@ export default function HomePage() {
 
   const handleProcessingError = (message: string) => {
     setProcessingError(message);
-    setCurrentMealData(null);
+    setCurrentMealData(null); // Clear previous meal data on error
     setIsLoadingMeal(false);
-     if (message) {
+     if (message) { // Only toast if there's an actual message
        toast({
         title: "Processing Error",
         description: message,
@@ -120,9 +118,10 @@ export default function HomePage() {
     setHistory(prevHistory => [newEntry, ...prevHistory]);
     toast({
       title: "Meal Logged!",
-      description: `Successfully added ${totals.calories.toFixed(0)} calories to your history.`,
+      description: `Successfully added ~${totals.calories.toFixed(0)} calories to your history.`,
       variant: "default",
     });
+    setCurrentMealData(null); // Clear the displayed meal after logging
   };
 
   const handleClearEntry = (id: string) => {
@@ -161,19 +160,20 @@ export default function HomePage() {
   return (
     <div className="flex flex-col min-h-screen bg-background font-sans">
       <AppHeader />
-      <main className="flex-grow container mx-auto px-4 py-8">
+      <main className="flex-grow container mx-auto px-4 py-6 md:py-8">
         <UserProfileSetupModal 
           isOpen={isProfileModalOpen} 
           onSave={handleSaveProfile} 
         />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          <div className="lg:col-span-2 space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 items-start">
+          {/* Main content column */}
+          <div className="lg:col-span-2 space-y-6 md:space-y-8">
             <FoodRecognitionForm 
               onMealDataProcessed={handleMealDataProcessed} 
               onProcessingError={handleProcessingError}
               clearCurrentMeal={clearCurrentMeal}
             />
-            {processingError && !currentMealData && (
+            {processingError && !currentMealData && ( // Show general error if recognition fails completely
               <Alert variant="destructive" className="mt-4">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Recognition Failed</AlertTitle>
@@ -182,15 +182,18 @@ export default function HomePage() {
             )}
             <FoodDisplay 
               mealData={currentMealData} 
-              isLoading={isLoadingMeal && !currentMealData} 
+              isLoading={isLoadingMeal && !currentMealData} // Show skeleton only if loading and no data yet
               onLogMeal={handleLogMeal}
             />
           </div>
-          <div className="lg:sticky lg:top-28 space-y-8">
+
+          {/* Sticky sidebar column */}
+          <div className="lg:sticky lg:top-24 space-y-6 md:space-y-8"> {/* Adjusted top for sticky header */}
             <CalorieProgressRing 
               consumedCalories={consumedToday}
               goalCalories={dailyGoalCalories}
-              className="mx-auto" 
+              className="mx-auto shadow-lg" 
+              size={200} // Slightly larger for better visibility
             />
             <CalorieGoalAdjuster
               consumedCalories={consumedToday}
@@ -202,12 +205,12 @@ export default function HomePage() {
               onClearEntry={handleClearEntry} 
               onClearAllHistory={handleClearAllHistory} 
             />
-             <div className="mt-8 py-6">
+             <div className="mt-8 py-4">
               <AdSenseUnit
                 adClient={ADSENSE_CLIENT_ID}
                 adSlot={ADSENSE_AD_SLOT_ID}
-                className="mx-auto"
-                style={{ display: 'block', minHeight: '250px', textAlign: 'center' }}
+                className="mx-auto rounded-lg overflow-hidden" // Added rounded corners and overflow hidden
+                style={{ display: 'block', minHeight: '200px', maxHeight: '250px', textAlign: 'center' }}
                 adFormat="auto"
                 fullWidthResponsive={true}
                 data-ai-hint="advertisement banner"
@@ -215,9 +218,8 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-        
       </main>
-      <footer className="py-6 text-center text-sm text-muted-foreground border-t border-border/60 bg-card">
+      <footer className="py-6 text-center text-sm text-muted-foreground border-t border-border/60 bg-card mt-auto">
         © {new Date().getFullYear()} calorietracker.ai. Snap, Track, Thrive!
       </footer>
     </div>

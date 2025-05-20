@@ -15,37 +15,35 @@ interface CalorieProgressRingProps {
 export function CalorieProgressRing({
   consumedCalories,
   goalCalories,
-  size = 180, // Default size in pixels
-  strokeWidth = 14, // Default stroke width in pixels
+  size = 180, 
+  strokeWidth = 14, 
   className,
 }: CalorieProgressRingProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const center = size / 2;
 
-  // Calculate progress, capping visual ring at 100% but allowing color to reflect overage
   const visualProgress = goalCalories > 0 ? Math.min(consumedCalories / goalCalories, 1) : 0;
   const strokeDashoffset = circumference * (1 - visualProgress);
 
-  let progressRingColor = "hsl(var(--primary))"; // Default: Green
-  const trackColor = "hsl(var(--muted))"; // Background track color
+  let progressRingColor = "hsl(var(--primary))"; // Default: Green (var --chart-1)
+  const trackColor = "hsl(var(--muted))"; 
 
   if (goalCalories > 0) {
     const percentage = consumedCalories / goalCalories;
     if (percentage > 1) {
-      progressRingColor = "hsl(var(--destructive))"; // Red if over goal
+      progressRingColor = "hsl(var(--destructive))"; 
     } else if (percentage > 0.75) {
-      progressRingColor = "hsl(var(--chart-3))"; // Orange/Amber if nearing goal (75%-100%)
+      progressRingColor = "hsl(var(--chart-3))"; // Orange/Amber
     }
   }
 
-  // Ensure consumedCalories is not negative for display
   const displayConsumedCalories = Math.max(0, consumedCalories);
 
   return (
     <div
       className={cn(
-        "relative flex flex-col items-center justify-center p-4 rounded-2xl shadow-xl bg-card",
+        "relative flex flex-col items-center justify-center p-4 rounded-xl shadow-lg bg-card", // Updated to rounded-xl
         className
       )}
       style={{ width: size, height: size }}
@@ -59,9 +57,8 @@ export function CalorieProgressRing({
         width={size}
         height={size}
         viewBox={`0 0 ${size} ${size}`}
-        className="transform -rotate-90" // Start the progress from the top
+        className="transform -rotate-90" 
       >
-        {/* Background Track */}
         <circle
           cx={center}
           cy={center}
@@ -71,7 +68,6 @@ export function CalorieProgressRing({
           strokeWidth={strokeWidth}
           aria-hidden="true"
         />
-        {/* Progress Ring */}
         <circle
           cx={center}
           cy={center}
@@ -89,13 +85,13 @@ export function CalorieProgressRing({
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
         <span
           className="font-bold text-foreground"
-          style={{ fontSize: Math.max(16, size / 5.5), lineHeight: '1.1' }} // Ensure minimum font size
+          style={{ fontSize: Math.max(18, size / 5.2), lineHeight: '1.1' }} // Adjusted font size
         >
           ~{Math.round(displayConsumedCalories)}
         </span>
         <span
           className="text-muted-foreground"
-          style={{ fontSize: Math.max(10, size / 13), marginTop: size / 30 }} // Ensure minimum font size
+          style={{ fontSize: Math.max(11, size / 12.5), marginTop: size / 30 }} // Adjusted font size
         >
           / {goalCalories.toLocaleString()} kcal
         </span>
