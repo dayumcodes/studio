@@ -1,3 +1,4 @@
+
 import type { CalculateCaloriesOutput as MealItemNutrients } from '@/ai/flows/calorie-calculation';
 
 // This represents a single food item with its nutrient information after AI processing.
@@ -12,4 +13,23 @@ export interface CalorieLogEntry {
   totalProtein: number;
   totalFat: number;
   totalCarbohydrates: number;
+}
+
+export const GENDERS = ["male", "female", "prefer_not_to_say"] as const;
+export type Gender = typeof GENDERS[number];
+
+export const ACTIVITY_LEVELS = [
+  "sedentary", // little or no exercise
+  "lightly_active", // light exercise/sports 1-3 days/week
+  "moderately_active", // moderate exercise/sports 3-5 days/week
+  "very_active", // hard exercise/sports 6-7 days a week
+] as const;
+export type ActivityLevel = typeof ACTIVITY_LEVELS[number];
+
+export interface UserProfile {
+  age: number;
+  gender: Gender;
+  weightKg: number; // Weight in kilograms
+  heightCm: number; // Height in centimeters
+  activityLevel: ActivityLevel;
 }

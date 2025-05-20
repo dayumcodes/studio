@@ -9,8 +9,9 @@ import { CalorieHistory } from '@/components/calorie-history';
 import { AdSenseUnit } from '@/components/adsense-unit';
 import { CalorieProgressRing } from '@/components/calorie-progress-ring';
 import { CalorieGoalAdjuster } from '@/components/calorie-goal-adjuster';
+import { UserProfileSetupModal } from '@/components/user-profile-setup-modal';
 import useLocalStorage from '@/hooks/use-local-storage';
-import type { FoodItem, CalorieLogEntry } from '@/lib/types';
+import type { FoodItem, CalorieLogEntry, UserProfile } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
@@ -18,6 +19,9 @@ import { isToday, parseISO } from 'date-fns';
 
 const HISTORY_STORAGE_KEY = 'calorieCamHistory';
 const GOAL_STORAGE_KEY = 'calorieCamGoal';
+const USER_PROFILE_STORAGE_KEY = 'calorieCamUserProfile';
+const PROFILE_SETUP_COMPLETE_KEY = 'calorieCamProfileSetupComplete';
+
 const DEFAULT_DAILY_GOAL = 2000;
 
 // TODO: Replace with your actual AdSense IDs, preferably via environment variables
@@ -32,7 +36,30 @@ export default function HomePage() {
   const [history, setHistory] = useLocalStorage<CalorieLogEntry[]>(HISTORY_STORAGE_KEY, []);
   const [dailyGoalCalories, setDailyGoalCalories] = useLocalStorage<number>(GOAL_STORAGE_KEY, DEFAULT_DAILY_GOAL);
   
+  const [userProfile, setUserProfile] = useLocalStorage<UserProfile | null>(USER_PROFILE_STORAGE_KEY, null);
+  const [hasCompletedProfileSetup, setHasCompletedProfileSetup] = useLocalStorage<boolean>(PROFILE_SETUP_COMPLETE_KEY, false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Open modal if setup isn't complete. This runs once on mount if `hasCompletedProfileSetup` is false.
+    if (!hasCompletedProfileSetup) {
+      setIsProfileModalOpen(true);
+    }
+  }, [hasCompletedProfileSetup]);
+
+  const handleSaveProfile = (data: UserProfile) => {
+    setUserProfile(data);
+    setHasCompletedProfileSetup(true);
+    setIsProfileModalOpen(false);
+    toast({
+      title: "Profile Saved!",
+      description: "Your information has been successfully saved. Welcome!",
+      variant: "default",
+    });
+     // Potentially set a default calorie goal based on profile here in the future
+  };
 
   const handleMealDataProcessed = (data: FoodItem[]) => {
     setCurrentMealData(data);
@@ -135,6 +162,10 @@ export default function HomePage() {
     <div className="flex flex-col min-h-screen bg-background font-sans">
       <AppHeader />
       <main className="flex-grow container mx-auto px-4 py-8">
+        <UserProfileSetupModal 
+          isOpen={isProfileModalOpen} 
+          onSave={handleSaveProfile} 
+        />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           <div className="lg:col-span-2 space-y-8">
             <FoodRecognitionForm 
