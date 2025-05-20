@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { FoodItem } from '@/lib/types';
 import { Zap, Beef, Salad, Info, StickyNote, TrendingUp, Wheat, CookingPot } from 'lucide-react'; // Added CookingPot for generic Fat
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 interface FoodDisplayProps {
   mealData: FoodItem[] | null;
