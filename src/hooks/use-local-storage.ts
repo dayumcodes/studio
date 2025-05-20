@@ -1,8 +1,12 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
 
-function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void] {
+function useLocalStorage<T>(
+  key: string, 
+  initialValue: T
+): [T, (value: T | ((val: T) => T)) => void, boolean] {
   const [storedValue, setStoredValue] = useState<T>(initialValue);
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -18,7 +22,8 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val
       }
       setIsInitialized(true); 
     }
-  }, [key]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]); // Only re-run if key changes, not initialValue
 
   useEffect(() => {
     if (typeof window !== "undefined" && isInitialized) {
@@ -37,7 +42,7 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val
     [] 
   );
 
-  return [storedValue, setValue];
+  return [storedValue, setValue, isInitialized];
 }
 
 export default useLocalStorage;

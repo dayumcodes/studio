@@ -32,20 +32,20 @@ export default function HomePage() {
   const [isLoadingMeal, setIsLoadingMeal] = useState(false); 
   const [processingError, setProcessingError] = useState<string | null>(null);
 
-  const [history, setHistory] = useLocalStorage<CalorieLogEntry[]>(HISTORY_STORAGE_KEY, []);
-  const [dailyGoalCalories, setDailyGoalCalories] = useLocalStorage<number>(GOAL_STORAGE_KEY, DEFAULT_DAILY_GOAL);
+  const [history, setHistory, isHistoryInitialized] = useLocalStorage<CalorieLogEntry[]>(HISTORY_STORAGE_KEY, []);
+  const [dailyGoalCalories, setDailyGoalCalories, isGoalInitialized] = useLocalStorage<number>(GOAL_STORAGE_KEY, DEFAULT_DAILY_GOAL);
   
-  const [userProfile, setUserProfile] = useLocalStorage<UserProfile | null>(USER_PROFILE_STORAGE_KEY, null);
-  const [hasCompletedProfileSetup, setHasCompletedProfileSetup] = useLocalStorage<boolean>(PROFILE_SETUP_COMPLETE_KEY, false);
+  const [userProfile, setUserProfile, isProfileInitialized] = useLocalStorage<UserProfile | null>(USER_PROFILE_STORAGE_KEY, null);
+  const [hasCompletedProfileSetup, setHasCompletedProfileSetup, isSetupCompleteInitialized] = useLocalStorage<boolean>(PROFILE_SETUP_COMPLETE_KEY, false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!hasCompletedProfileSetup) {
+    if (isSetupCompleteInitialized && !hasCompletedProfileSetup) {
       setIsProfileModalOpen(true);
     }
-  }, [hasCompletedProfileSetup]);
+  }, [hasCompletedProfileSetup, isSetupCompleteInitialized]);
 
   const handleSaveProfile = (data: UserProfile) => {
     setUserProfile(data);
@@ -142,10 +142,12 @@ export default function HomePage() {
   const [consumedToday, setConsumedToday] = useState(0);
 
   useEffect(() => {
-    const todayEntries = history.filter(entry => isToday(parseISO(entry.date)));
-    const totalConsumed = todayEntries.reduce((sum, entry) => sum + entry.totalCalories, 0);
-    setConsumedToday(totalConsumed);
-  }, [history]);
+    if (isHistoryInitialized) { // Only calculate if history is loaded
+      const todayEntries = history.filter(entry => isToday(parseISO(entry.date)));
+      const totalConsumed = todayEntries.reduce((sum, entry) => sum + entry.totalCalories, 0);
+      setConsumedToday(totalConsumed);
+    }
+  }, [history, isHistoryInitialized]);
 
   const handleNewGoalSet = (newGoal: number) => {
     setDailyGoalCalories(newGoal);
@@ -160,10 +162,12 @@ export default function HomePage() {
     <div className="flex flex-col min-h-screen bg-background font-sans">
       <AppHeader />
       <main className="flex-grow container mx-auto px-4 py-4 md:py-6">
-        <UserProfileSetupModal 
-          isOpen={isProfileModalOpen} 
-          onSave={handleSaveProfile} 
-        />
+        {(isSetupCompleteInitialized && isProfileInitialized) && ( // Ensure dependent hooks are initialized
+          <UserProfileSetupModal 
+            isOpen={isProfileModalOpen} 
+            onSave={handleSaveProfile} 
+          />
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 items-start">
           {/* Main content column */}
           <div className="lg:col-span-2 space-y-4 md:space-y-6">
@@ -188,22 +192,28 @@ export default function HomePage() {
 
           {/* Sticky sidebar column */}
           <div className="lg:sticky lg:top-24 space-y-4 md:space-y-6"> {/* Adjusted top for sticky header */}
-            <CalorieProgressRing 
-              consumedCalories={consumedToday}
-              goalCalories={dailyGoalCalories}
-              className="mx-auto shadow-lg" 
-              size={200} // Slightly larger for better visibility
-            />
-            <CalorieGoalAdjuster
-              consumedCalories={consumedToday}
-              currentGoalCalories={dailyGoalCalories}
-              onNewGoalSet={handleNewGoalSet}
-            />
-            <CalorieHistory 
-              history={history} 
-              onClearEntry={handleClearEntry} 
-              onClearAllHistory={handleClearAllHistory} 
-            />
+            {isHistoryInitialized && isGoalInitialized && ( // Ensure dependent hooks are initialized
+              <>
+                <CalorieProgressRing 
+                  consumedCalories={consumedToday}
+                  goalCalories={dailyGoalCalories}
+                  className="mx-auto shadow-lg" 
+                  size={200} // Slightly larger for better visibility
+                />
+                <CalorieGoalAdjuster
+                  consumedCalories={consumedToday}
+                  currentGoalCalories={dailyGoalCalories}
+                  onNewGoalSet={handleNewGoalSet}
+                />
+              </>
+            )}
+            {isHistoryInitialized && (
+              <CalorieHistory 
+                history={history} 
+                onClearEntry={handleClearEntry} 
+                onClearAllHistory={handleClearAllHistory} 
+              />
+            )}
              <div className="mt-6 py-3">
               <AdSenseUnit
                 adClient={ADSENSE_CLIENT_ID}
