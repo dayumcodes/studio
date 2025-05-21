@@ -61,8 +61,14 @@ const SummaryCard = ({ title, value, goal, icon, color, className, children, onC
   </Card>
 );
 
+// Define props type to include searchParams
+interface HomePageProps {
+  searchParams?: { [key: string]: string | string[] | undefined };
+}
 
-export default function HomePage() {
+export default function HomePage({ searchParams }: HomePageProps) {
+  const [clientReady, setClientReady] = useState(false);
+
   const [currentMealData, setCurrentMealData] = useState<FoodItem[] | null>(null);
   const [isLoadingMeal, setIsLoadingMeal] = useState(false); 
   const [processingError, setProcessingError] = useState<string | null>(null);
@@ -77,10 +83,14 @@ export default function HomePage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (isSetupCompleteInitialized && isProfileInitialized && !hasCompletedProfileSetup && !isProfileModalOpen) {
+    setClientReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (clientReady && isSetupCompleteInitialized && isProfileInitialized && !hasCompletedProfileSetup && !isProfileModalOpen) {
       setIsProfileModalOpen(true);
     }
-  }, [hasCompletedProfileSetup, isSetupCompleteInitialized, isProfileInitialized, isProfileModalOpen]);
+  }, [clientReady, hasCompletedProfileSetup, isSetupCompleteInitialized, isProfileInitialized, isProfileModalOpen]);
 
 
   const handleSaveProfile = (data: UserProfile) => {
@@ -186,18 +196,32 @@ export default function HomePage() {
   const [carbsToday, setCarbsToday] = useState(0);
 
   useEffect(() => {
-    if (isHistoryInitialized) { 
+    if (clientReady && isHistoryInitialized) { 
       const todayEntries = history.filter(entry => isToday(parseISO(entry.date)));
       setConsumedToday(todayEntries.reduce((sum, entry) => sum + entry.totalCalories, 0));
       setProteinToday(todayEntries.reduce((sum, entry) => sum + entry.totalProtein, 0));
       setFatToday(todayEntries.reduce((sum, entry) => sum + entry.totalFat, 0));
       setCarbsToday(todayEntries.reduce((sum, entry) => sum + entry.totalCarbohydrates, 0));
     }
-  }, [history, isHistoryInitialized]);
+  }, [history, isHistoryInitialized, clientReady]);
 
   const goalProtein = userProfile ? Math.round(userProfile.weightKg * 1.6) : 100; 
   const goalFat = userProfile ? Math.round((dailyGoalCalories * 0.25) / 9) : 50; 
   const goalCarbs = userProfile ? Math.round((dailyGoalCalories * 0.50) / 4) : 250; 
+
+  if (!clientReady) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background font-sans">
+        <AppHeader />
+        <main className="flex-grow container mx-auto px-4 py-4 md:py-6 space-y-6 md:space-y-8">
+          <div className="text-center py-10 text-muted-foreground">Loading application...</div>
+        </main>
+        <footer className="py-6 text-center text-sm text-muted-foreground border-t border-border/60 bg-card mt-auto">
+          © {new Date().getFullYear()} calorietracker.ai. Snap, Track, Thrive!
+        </footer>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background font-sans">
@@ -258,7 +282,7 @@ export default function HomePage() {
                 value={`~${consumedToday.toFixed(0)}`}
                 goal={`/ ${dailyGoalCalories.toFixed(0)} kcal`}
                 icon={<Flame className="h-7 w-7" />}
-                color="text-orange-500" // This specific color might be overridden by theme, check globals.css for --chart-colors if needed
+                color="text-orange-500" 
               />
               <SummaryCard
                 title="Carbs"

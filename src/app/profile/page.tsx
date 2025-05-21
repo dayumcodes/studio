@@ -1,19 +1,19 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import useLocalStorage from '@/hooks/use-local-storage';
-import type { UserProfile, CalorieLogEntry, FoodItem } from '@/lib/types';
+import type { UserProfile, CalorieLogEntry } from '@/lib/types';
 import { USER_PROFILE_STORAGE_KEY, HISTORY_STORAGE_KEY } from '@/lib/constants';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format, parseISO, isToday, isYesterday } from 'date-fns';
-import { UserCircle, Apple, CalendarDays, Zap, Beef, Wheat, CookingPot, ListChecks, Utensils } from 'lucide-react';
-import { GENDERS, ACTIVITY_LEVELS, genderLabels, activityLevelLabels } from '@/lib/types'; // Ensure these are exported from types.ts
+import { UserCircle, CalendarDays, Zap, Beef, Wheat, CookingPot, ListChecks, Utensils } from 'lucide-react';
+import { genderLabels, activityLevelLabels } from '@/lib/types'; 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -30,17 +30,26 @@ interface GroupedHistoryEntry {
   totalCarbohydrates: number;
 }
 
-export default function ProfilePage() {
+// Define props type to include searchParams
+interface ProfilePageProps {
+  searchParams?: { [key: string]: string | string[] | undefined };
+}
+
+export default function ProfilePage({ searchParams }: ProfilePageProps) {
+  const [clientReady, setClientReady] = useState(false);
   const [userProfile, setUserProfile, isProfileInitialized] = useLocalStorage<UserProfile | null>(USER_PROFILE_STORAGE_KEY, null);
   const [history, setHistory, isHistoryInitialized] = useLocalStorage<CalorieLogEntry[]>(HISTORY_STORAGE_KEY, []);
   const [groupedHistory, setGroupedHistory] = useState<GroupedHistoryEntry[]>([]);
 
   useEffect(() => {
-    if (!isHistoryInitialized) return;
+    setClientReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!clientReady || !isHistoryInitialized) return;
 
     const groups: Record<string, GroupedHistoryEntry> = {};
     
-    // Sort history by date descending before grouping to ensure meals within a day are ordered if needed
     const sortedHistoryForGrouping = [...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     sortedHistoryForGrouping.forEach(entry => {
@@ -70,27 +79,37 @@ export default function ProfilePage() {
       groups[dateKey].totalCarbohydrates += entry.totalCarbohydrates;
     });
     
-    // Sort groups by date descending
     const sortedGroups = Object.values(groups).sort((a, b) => b.date.getTime() - a.date.getTime());
     setGroupedHistory(sortedGroups);
 
-  }, [history, isHistoryInitialized]);
+  }, [history, isHistoryInitialized, clientReady]);
 
 
-  if (!isProfileInitialized || !userProfile) { // Wait for initialization
+  if (!clientReady || !isProfileInitialized) { 
     return (
       <div className="flex flex-col min-h-screen bg-background font-sans">
         <AppHeader />
         <main className="flex-grow container mx-auto px-4 py-8 flex flex-col items-center justify-center">
-          {!isProfileInitialized ? (
-             <Alert variant="default" className="max-w-md text-center shadow-lg">
+            <Alert variant="default" className="max-w-md text-center shadow-lg">
                 <UserCircle className="h-5 w-5 animate-pulse" />
                 <AlertTitle>Loading Profile...</AlertTitle>
                 <AlertDescription>
                   Please wait while we fetch your profile information.
                 </AlertDescription>
             </Alert>
-          ) : (
+        </main>
+         <footer className="py-6 text-center text-sm text-muted-foreground border-t border-border/60 bg-card mt-auto">
+          © {new Date().getFullYear()} calorietracker.ai. Snap, Track, Thrive!
+        </footer>
+      </div>
+    );
+  }
+  
+  if (!userProfile) {
+     return (
+      <div className="flex flex-col min-h-screen bg-background font-sans">
+        <AppHeader />
+        <main className="flex-grow container mx-auto px-4 py-8 flex flex-col items-center justify-center">
             <Alert variant="default" className="max-w-md text-center shadow-lg">
               <UserCircle className="h-5 w-5" />
               <AlertTitle>Profile Not Found</AlertTitle>
@@ -101,7 +120,6 @@ export default function ProfilePage() {
                   <Button variant="outline">Go to Homepage</Button>
               </Link>
             </Alert>
-          )}
         </main>
          <footer className="py-6 text-center text-sm text-muted-foreground border-t border-border/60 bg-card mt-auto">
           © {new Date().getFullYear()} calorietracker.ai. Snap, Track, Thrive!
@@ -109,6 +127,7 @@ export default function ProfilePage() {
       </div>
     );
   }
+
 
   return (
     <div className="flex flex-col min-h-screen bg-background font-sans">
@@ -120,7 +139,6 @@ export default function ProfilePage() {
             <CardHeader className="bg-muted/30 p-5 md:p-6">
               <div className="flex items-center gap-4">
                 <Avatar className="h-16 w-16 md:h-20 md:w-20 border-2 border-primary">
-                  {/* Placeholder for future avatar image */}
                   <AvatarFallback className="bg-primary/20 text-primary">
                     <UserCircle size={40} />
                   </AvatarFallback>
@@ -166,8 +184,8 @@ export default function ProfilePage() {
                     </div>
                 </div>
             </CardHeader>
-            <CardContent className="p-0 flex flex-col"> {/* Modified: Added flex flex-col */}
-              {!isHistoryInitialized ? (
+            <CardContent className="p-0 flex flex-col">
+              {!isHistoryInitialized || !clientReady ? (
                  <div className="py-10 px-5 text-center text-muted-foreground">
                   <ListChecks className="h-12 w-12 mx-auto mb-3 text-muted-foreground/70 animate-pulse" />
                   <p className="font-medium">Loading Meal History...</p>
@@ -179,7 +197,7 @@ export default function ProfilePage() {
                   <p className="text-sm">Start tracking your meals on the homepage!</p>
                 </div>
               ) : (
-                <ScrollArea className="max-h-[70vh] flex-1 min-h-0"> {/* Modified: Added flex-1 min-h-0 */}
+                <ScrollArea className="max-h-[70vh] flex-1 min-h-0"> 
                   <Accordion type="multiple" className="w-full">
                     {groupedHistory.map((group, index) => (
                       <AccordionItem value={`day-${index}`} key={`day-${index}`} className="border-b last:border-b-0">
@@ -220,7 +238,9 @@ export default function ProfilePage() {
                                   <ul className="space-y-1 list-inside list-disc pl-1 marker:text-primary/70 max-h-40 overflow-y-auto pr-2">
                                     {entry.mealItems.map((item, itemIndex) => (
                                       <li key={itemIndex} className="capitalize text-muted-foreground">
-                                        {item.name} (~{item.nutrientInfo.calories.toFixed(0)} kcal)
+                                        {item.name}
+                                        {item.quantity ? ` (${item.quantity})` : ''}
+                                        {' '} (~{item.nutrientInfo.calories.toFixed(0)} kcal)
                                       </li>
                                     ))}
                                   </ul>
@@ -249,30 +269,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-// Helper constants for local storage keys, can be moved to a constants file
-// export const USER_PROFILE_STORAGE_KEY = 'calorieCamUserProfile'; // Already exists on page.tsx, should centralize
-// export const HISTORY_STORAGE_KEY = 'calorieCamHistory'; // Already exists on page.tsx, should centralize
-// For now, I'll define them here if not already available from types.ts - better to create a dedicated constants.ts
-const PROFILE_SETUP_COMPLETE_KEY = 'calorieCamProfileSetupComplete';
-// Define GENDERS and ACTIVITY_LEVELS if not available (they should be in types.ts)
-// export const GENDERS = ["male", "female", "other", "prefer_not_to_say"] as const;
-// export const ACTIVITY_LEVELS = ["sedentary", "lightly_active", "moderately_active", "very_active", "extra_active"] as const;
-
-// export const activityLevelLabels: Record<ActivityLevel, string> = {
-//   sedentary: "Sedentary (little or no exercise)",
-//   lightly_active: "Lightly active (light exercise 1-3 days/wk)",
-//   moderately_active: "Moderately active (moderate exercise 3-5 days/wk)",
-//   very_active: "Very active (hard exercise 6-7 days/wk)",
-//   extra_active: "Extra active (very hard exercise & physical job)",
-// };
-
-// export const genderLabels: Record<Gender, string> = {
-//   male: "Male",
-//   female: "Female",
-//   other: "Other",
-//   prefer_not_to_say: "Prefer not to say",
-// };
-
-
-    
