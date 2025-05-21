@@ -12,7 +12,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format, parseISO, isToday, isYesterday } from 'date-fns';
-import { UserCircle, CalendarDays, Zap, Beef, Wheat, CookingPot, ListChecks, Utensils } from 'lucide-react';
+import { UserCircle, CalendarDays, Zap, Beef, Wheat, CookingPot, ListChecks, Utensils, Loader2 } from 'lucide-react';
 import { genderLabels, activityLevelLabels } from '@/lib/types'; 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from 'next/link';
@@ -30,12 +30,13 @@ interface GroupedHistoryEntry {
   totalCarbohydrates: number;
 }
 
-// Define props type to include searchParams
 interface ProfilePageProps {
   searchParams?: { [key: string]: string | string[] | undefined };
 }
 
-export default function ProfilePage({ searchParams }: ProfilePageProps) {
+export default function ProfilePage(props: ProfilePageProps) {
+  // const searchParams = props.searchParams; // Access if needed
+
   const [clientReady, setClientReady] = useState(false);
   const [userProfile, setUserProfile, isProfileInitialized] = useLocalStorage<UserProfile | null>(USER_PROFILE_STORAGE_KEY, null);
   const [history, setHistory, isHistoryInitialized] = useLocalStorage<CalorieLogEntry[]>(HISTORY_STORAGE_KEY, []);
@@ -85,22 +86,13 @@ export default function ProfilePage({ searchParams }: ProfilePageProps) {
   }, [history, isHistoryInitialized, clientReady]);
 
 
-  if (!clientReady || !isProfileInitialized) { 
+  if (!clientReady || !isProfileInitialized || !isHistoryInitialized) { 
     return (
-      <div className="flex flex-col min-h-screen bg-background font-sans">
-        <AppHeader />
-        <main className="flex-grow container mx-auto px-4 py-8 flex flex-col items-center justify-center">
-            <Alert variant="default" className="max-w-md text-center shadow-lg">
-                <UserCircle className="h-5 w-5 animate-pulse" />
-                <AlertTitle>Loading Profile...</AlertTitle>
-                <AlertDescription>
-                  Please wait while we fetch your profile information.
-                </AlertDescription>
-            </Alert>
-        </main>
-         <footer className="py-6 text-center text-sm text-muted-foreground border-t border-border/60 bg-card mt-auto">
-          © {new Date().getFullYear()} calorietracker.ai. Snap, Track, Thrive!
-        </footer>
+      <div className="fixed inset-0 flex items-center justify-center bg-background z-50">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+          <p className="text-lg text-muted-foreground">Loading Profile...</p>
+        </div>
       </div>
     );
   }
@@ -185,7 +177,7 @@ export default function ProfilePage({ searchParams }: ProfilePageProps) {
                 </div>
             </CardHeader>
             <CardContent className="p-0 flex flex-col">
-              {!isHistoryInitialized || !clientReady ? (
+              {!isHistoryInitialized || !clientReady ? ( // Should already be handled by page-level check, but good for robustness
                  <div className="py-10 px-5 text-center text-muted-foreground">
                   <ListChecks className="h-12 w-12 mx-auto mb-3 text-muted-foreground/70 animate-pulse" />
                   <p className="font-medium">Loading Meal History...</p>

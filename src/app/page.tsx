@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { FoodRecognitionForm } from '@/components/food-recognition-form';
 import { FoodDisplay } from '@/components/food-display';
@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Flame, Brain, TrendingUp, Utensils, Leaf, Fish, AlertCircle, ChevronRight, Camera, UploadCloud } from 'lucide-react';
+import { Flame, Brain, TrendingUp, Utensils, Leaf, Fish, AlertCircle, ChevronRight, Camera, UploadCloud, Loader2 } from 'lucide-react';
 import { isToday, parseISO } from 'date-fns';
 import { 
   HISTORY_STORAGE_KEY, 
@@ -61,12 +61,13 @@ const SummaryCard = ({ title, value, goal, icon, color, className, children, onC
   </Card>
 );
 
-// Define props type to include searchParams
 interface HomePageProps {
   searchParams?: { [key: string]: string | string[] | undefined };
 }
 
-export default function HomePage({ searchParams }: HomePageProps) {
+export default function HomePage(props: HomePageProps) {
+  // const searchParams = props.searchParams; // Access if needed
+
   const [clientReady, setClientReady] = useState(false);
 
   const [currentMealData, setCurrentMealData] = useState<FoodItem[] | null>(null);
@@ -78,10 +79,11 @@ export default function HomePage({ searchParams }: HomePageProps) {
   
   const [userProfile, setUserProfile, isProfileInitialized] = useLocalStorage<UserProfile | null>(USER_PROFILE_STORAGE_KEY, null);
   const [hasCompletedProfileSetup, setHasCompletedProfileSetup, isSetupCompleteInitialized] = useLocalStorage<boolean>(PROFILE_SETUP_COMPLETE_KEY, false);
+  
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   
   const { toast } = useToast();
-
+  
   useEffect(() => {
     setClientReady(true);
   }, []);
@@ -157,10 +159,10 @@ export default function HomePage({ searchParams }: HomePageProps) {
     }
   };
   
-  const clearCurrentMeal = () => {
+  const clearCurrentMeal = useCallback(() => {
     setCurrentMealData(null);
     setProcessingError(null);
-  }
+  }, []);
 
   const handleLogMeal = (mealItems: FoodItem[], totals: { calories: number; protein: number; fat: number; carbs: number }) => {
     if (!mealItems || mealItems.length === 0) {
@@ -209,16 +211,13 @@ export default function HomePage({ searchParams }: HomePageProps) {
   const goalFat = userProfile ? Math.round((dailyGoalCalories * 0.25) / 9) : 50; 
   const goalCarbs = userProfile ? Math.round((dailyGoalCalories * 0.50) / 4) : 250; 
 
-  if (!clientReady) {
+  if (!clientReady || !isHistoryInitialized || !isGoalInitialized || !isProfileInitialized || !isSetupCompleteInitialized) {
     return (
-      <div className="flex flex-col min-h-screen bg-background font-sans">
-        <AppHeader />
-        <main className="flex-grow container mx-auto px-4 py-4 md:py-6 space-y-6 md:space-y-8">
-          <div className="text-center py-10 text-muted-foreground">Loading application...</div>
-        </main>
-        <footer className="py-6 text-center text-sm text-muted-foreground border-t border-border/60 bg-card mt-auto">
-          © {new Date().getFullYear()} calorietracker.ai. Snap, Track, Thrive!
-        </footer>
+      <div className="fixed inset-0 flex items-center justify-center bg-background z-50">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+          <p className="text-lg text-muted-foreground">Loading CalorieCam...</p>
+        </div>
       </div>
     );
   }
@@ -255,7 +254,6 @@ export default function HomePage({ searchParams }: HomePageProps) {
           </p>
         </section>
 
-        {/* Action Buttons - Simplified FoodRecognitionForm */}
         <FoodRecognitionForm
           onMealDataProcessed={handleMealDataProcessed} 
           onProcessingError={handleProcessingError}
@@ -270,7 +268,6 @@ export default function HomePage({ searchParams }: HomePageProps) {
           </Alert>
         )}
 
-        {/* Today's Summary - Kcal, Carbs, Protein, Fat */}
         {isHistoryInitialized && isGoalInitialized && (
           <section>
             <h2 className="text-2xl font-semibold text-foreground mb-4 flex items-center">
@@ -329,7 +326,6 @@ export default function HomePage({ searchParams }: HomePageProps) {
           />
         )}
 
-        {/* Smart Insights Placeholder */}
         <Card className="shadow-lg rounded-xl overflow-hidden bg-card">
           <CardHeader className="pb-3 pt-4 px-4">
             <CardTitle className="flex items-center text-md font-semibold text-indigo-500">
