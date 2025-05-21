@@ -1,20 +1,20 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { FoodRecognitionForm } from '@/components/food-recognition-form';
 import { FoodDisplay } from '@/components/food-display';
 import { CalorieHistory } from '@/components/calorie-history';
-import { AdSenseUnit } from '@/components/adsense-unit';
-import { CalorieProgressRing } from '@/components/calorie-progress-ring';
-import { CalorieGoalAdjuster } from '@/components/calorie-goal-adjuster';
+import { CalorieProgressRing } from '@/components/calorie-progress-ring'; 
 import { UserProfileSetupModal } from '@/components/user-profile-setup-modal';
 import useLocalStorage from '@/hooks/use-local-storage';
 import type { FoodItem, CalorieLogEntry, UserProfile } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { Flame, Brain, TrendingUp, Utensils, Leaf, Fish, AlertCircle, ChevronRight, Camera, UploadCloud } from 'lucide-react';
 import { isToday, parseISO } from 'date-fns';
 import { 
   HISTORY_STORAGE_KEY, 
@@ -22,9 +22,44 @@ import {
   USER_PROFILE_STORAGE_KEY, 
   PROFILE_SETUP_COMPLETE_KEY,
   DEFAULT_DAILY_GOAL,
-  ADSENSE_CLIENT_ID,
-  ADSENSE_AD_SLOT_ID
 } from '@/lib/constants';
+import { cn } from '@/lib/utils';
+
+interface SummaryCardProps {
+  title: string;
+  value: string;
+  goal?: string;
+  icon: React.ReactElement;
+  color: string;
+  className?: string;
+  children?: React.ReactNode;
+  onClick?: () => void;
+}
+
+const SummaryCard = ({ title, value, goal, icon, color, className, children, onClick }: SummaryCardProps) => (
+  <Card 
+    onClick={onClick} 
+    className={cn(
+      "shadow-lg hover:shadow-xl transition-shadow rounded-xl overflow-hidden bg-card", 
+      className, 
+      onClick ? "cursor-pointer" : ""
+    )}
+  >
+    <CardHeader className="pb-3 pt-4 px-4">
+      <CardTitle className={cn("flex items-center justify-between text-md font-semibold", color)}>
+        <span className="flex items-center gap-2">
+          {React.cloneElement(icon, { className: cn("h-5 w-5", icon.props.className) })}
+          {title}
+        </span>
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="px-4 pb-4">
+      <p className="text-2xl font-bold text-foreground">{value}</p>
+      {goal && <p className="text-xs text-muted-foreground">{goal}</p>}
+      {children}
+    </CardContent>
+  </Card>
+);
 
 
 export default function HomePage() {
@@ -42,13 +77,15 @@ export default function HomePage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (isSetupCompleteInitialized && !hasCompletedProfileSetup) {
+    if (isSetupCompleteInitialized && isProfileInitialized && !hasCompletedProfileSetup && !isProfileModalOpen) {
       setIsProfileModalOpen(true);
     }
-  }, [hasCompletedProfileSetup, isSetupCompleteInitialized]);
+  }, [hasCompletedProfileSetup, isSetupCompleteInitialized, isProfileInitialized, isProfileModalOpen]);
+
 
   const handleSaveProfile = (data: UserProfile) => {
     setUserProfile(data);
+    setDailyGoalCalories(calculateBMR(data)); 
     setHasCompletedProfileSetup(true);
     setIsProfileModalOpen(false);
     toast({
@@ -57,6 +94,26 @@ export default function HomePage() {
       variant: "default",
     });
   };
+  
+  const calculateBMR = (profile: UserProfile): number => {
+    let bmr: number;
+    if (profile.gender === 'male') {
+      bmr = 88.362 + (13.397 * profile.weightKg) + (4.799 * profile.heightCm) - (5.677 * profile.age);
+    } else { 
+      bmr = 447.593 + (9.247 * profile.weightKg) + (3.098 * profile.heightCm) - (4.330 * profile.age);
+    }
+
+    const activityMultipliers: Record<UserProfile['activityLevel'], number> = {
+      sedentary: 1.2,
+      lightly_active: 1.375,
+      moderately_active: 1.55,
+      very_active: 1.725,
+    };
+    
+    const tdee = bmr * (activityMultipliers[profile.activityLevel] || 1.2);
+    return Math.round(tdee > 1000 ? tdee : DEFAULT_DAILY_GOAL); 
+  };
+
 
   const handleMealDataProcessed = (data: FoodItem[]) => {
     setCurrentMealData(data);
@@ -79,9 +136,9 @@ export default function HomePage() {
 
   const handleProcessingError = (message: string) => {
     setProcessingError(message);
-    setCurrentMealData(null); // Clear previous meal data on error
+    setCurrentMealData(null); 
     setIsLoadingMeal(false);
-     if (message) { // Only toast if there's an actual message
+     if (message) { 
        toast({
         title: "Processing Error",
         description: message,
@@ -120,113 +177,153 @@ export default function HomePage() {
       description: `Successfully added ~${totals.calories.toFixed(0)} calories to your history.`,
       variant: "default",
     });
-    setCurrentMealData(null); // Clear the displayed meal after logging
-  };
-
-  const handleClearEntry = (id: string) => {
-    setHistory(prevHistory => prevHistory.filter(entry => entry.id !== id));
-    toast({
-      title: "Entry Removed",
-      description: "The selected meal has been removed from your history.",
-    });
-  };
-
-  const handleClearAllHistory = () => {
-    setHistory([]);
-    toast({
-      title: "History Cleared",
-      description: "All your logged meals have been removed.",
-    });
+    setCurrentMealData(null); 
   };
 
   const [consumedToday, setConsumedToday] = useState(0);
+  const [proteinToday, setProteinToday] = useState(0);
+  const [fatToday, setFatToday] = useState(0);
+  const [carbsToday, setCarbsToday] = useState(0);
 
   useEffect(() => {
-    if (isHistoryInitialized) { // Only calculate if history is loaded
+    if (isHistoryInitialized) { 
       const todayEntries = history.filter(entry => isToday(parseISO(entry.date)));
-      const totalConsumed = todayEntries.reduce((sum, entry) => sum + entry.totalCalories, 0);
-      setConsumedToday(totalConsumed);
+      setConsumedToday(todayEntries.reduce((sum, entry) => sum + entry.totalCalories, 0));
+      setProteinToday(todayEntries.reduce((sum, entry) => sum + entry.totalProtein, 0));
+      setFatToday(todayEntries.reduce((sum, entry) => sum + entry.totalFat, 0));
+      setCarbsToday(todayEntries.reduce((sum, entry) => sum + entry.totalCarbohydrates, 0));
     }
   }, [history, isHistoryInitialized]);
 
-  const handleNewGoalSet = (newGoal: number) => {
-    setDailyGoalCalories(newGoal);
-    toast({
-      title: "Goal Updated!",
-      description: `Your new daily calorie goal is ${newGoal.toFixed(0)} kcal.`,
-      variant: "default"
-    });
-  };
+  const goalProtein = userProfile ? Math.round(userProfile.weightKg * 1.6) : 100; 
+  const goalFat = userProfile ? Math.round((dailyGoalCalories * 0.25) / 9) : 50; 
+  const goalCarbs = userProfile ? Math.round((dailyGoalCalories * 0.50) / 4) : 250; 
 
   return (
     <div className="flex flex-col min-h-screen bg-background font-sans">
       <AppHeader />
-      <main className="flex-grow container mx-auto px-4 py-4 md:py-6">
-        {(isSetupCompleteInitialized && isProfileInitialized) && ( // Ensure dependent hooks are initialized
+      <main className="flex-grow container mx-auto px-4 py-4 md:py-6 space-y-6 md:space-y-8">
+        
+        {(isSetupCompleteInitialized && isProfileInitialized) && (
           <UserProfileSetupModal 
             isOpen={isProfileModalOpen} 
             onSave={handleSaveProfile} 
           />
         )}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 items-start">
-          {/* Main content column */}
-          <div className="lg:col-span-2 space-y-4 md:space-y-6">
-            <FoodRecognitionForm 
-              onMealDataProcessed={handleMealDataProcessed} 
-              onProcessingError={handleProcessingError}
-              clearCurrentMeal={clearCurrentMeal}
-            />
-            {processingError && !currentMealData && ( // Show general error if recognition fails completely
-              <Alert variant="destructive" className="mt-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Recognition Failed</AlertTitle>
-                <AlertDescription>{processingError}</AlertDescription>
-              </Alert>
-            )}
-            <FoodDisplay 
-              mealData={currentMealData} 
-              isLoading={isLoadingMeal && !currentMealData} // Show skeleton only if loading and no data yet
-              onLogMeal={handleLogMeal}
-            />
-          </div>
 
-          {/* Sticky sidebar column */}
-          <div className="lg:sticky lg:top-24 space-y-4 md:space-y-6"> {/* Adjusted top for sticky header */}
-            {isHistoryInitialized && isGoalInitialized && ( // Ensure dependent hooks are initialized
-              <>
-                <CalorieProgressRing 
-                  consumedCalories={consumedToday}
-                  goalCalories={dailyGoalCalories}
-                  className="mx-auto shadow-lg" 
-                  size={200} // Slightly larger for better visibility
-                />
-                <CalorieGoalAdjuster
-                  consumedCalories={consumedToday}
-                  currentGoalCalories={dailyGoalCalories}
-                  onNewGoalSet={handleNewGoalSet}
-                />
-              </>
-            )}
-            {isHistoryInitialized && (
-              <CalorieHistory 
-                history={history} 
-                onClearEntry={handleClearEntry} 
-                onClearAllHistory={handleClearAllHistory} 
+        {isGoalInitialized && isHistoryInitialized && (
+          <section className="my-6 md:my-8">
+            <CalorieProgressRing
+              consumedCalories={consumedToday}
+              goalCalories={dailyGoalCalories}
+              size={200}
+              strokeWidth={16}
+              className="mx-auto shadow-lg"
+            />
+          </section>
+        )}
+
+        {/* Hero Section */}
+        <section className="text-center py-8 md:py-10 bg-gradient-to-br from-primary/10 to-accent/10 rounded-xl shadow-lg">
+          <h2 className="text-3xl md:text-4xl font-bold text-primary mb-2">Smart Calorie Tracker</h2>
+          <p className="text-md md:text-lg text-muted-foreground max-w-xl mx-auto">
+            Snap a photo, get insights, and track your nutrition effortlessly.
+          </p>
+        </section>
+
+        {/* Action Buttons - Simplified FoodRecognitionForm */}
+        <FoodRecognitionForm
+          onMealDataProcessed={handleMealDataProcessed} 
+          onProcessingError={handleProcessingError}
+          clearCurrentMeal={clearCurrentMeal}
+        />
+
+        {processingError && !currentMealData && (
+          <Alert variant="destructive" className="mt-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Recognition Failed</AlertTitle>
+            <AlertDescription>{processingError}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Today's Summary - Kcal, Carbs, Protein, Fat */}
+        {isHistoryInitialized && isGoalInitialized && (
+          <section>
+            <h2 className="text-2xl font-semibold text-foreground mb-4 flex items-center">
+              <TrendingUp className="mr-3 h-7 w-7 text-primary" /> Today's Summary
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+              <SummaryCard
+                title="Kcal"
+                value={`~${consumedToday.toFixed(0)}`}
+                goal={`/ ${dailyGoalCalories.toFixed(0)} kcal`}
+                icon={<Flame className="h-7 w-7" />}
+                color="text-orange-500" // This specific color might be overridden by theme, check globals.css for --chart-colors if needed
               />
-            )}
-             <div className="mt-6 py-3">
-              <AdSenseUnit
-                adClient={ADSENSE_CLIENT_ID}
-                adSlot={ADSENSE_AD_SLOT_ID}
-                className="mx-auto rounded-lg overflow-hidden" // Added rounded corners and overflow hidden
-                style={{ display: 'block', minHeight: '200px', maxHeight: '250px', textAlign: 'center' }}
-                adFormat="auto"
-                fullWidthResponsive={true}
-                data-ai-hint="advertisement banner"
+              <SummaryCard
+                title="Carbs"
+                value={`~${carbsToday.toFixed(0)}g`}
+                goal={`/ ${goalCarbs}g`}
+                icon={<Leaf className="h-7 w-7" />}
+                color="text-green-500"
+              />
+              <SummaryCard
+                title="Protein"
+                value={`~${proteinToday.toFixed(0)}g`}
+                goal={`/ ${goalProtein}g`}
+                icon={<Fish className="h-7 w-7" />} 
+                color="text-red-500"
+              />
+              <SummaryCard
+                title="Fat"
+                value={`~${fatToday.toFixed(0)}g`}
+                goal={`/ ${goalFat}g`}
+                icon={<Utensils className="h-7 w-7" />} 
+                color="text-yellow-600"
               />
             </div>
-          </div>
-        </div>
+          </section>
+        )}
+        
+        <FoodDisplay 
+          mealData={currentMealData} 
+          isLoading={isLoadingMeal && !currentMealData} 
+          onLogMeal={handleLogMeal}
+        />
+        
+        {isHistoryInitialized && (
+          <CalorieHistory 
+            history={history} 
+            onClearEntry={(id) => {
+              setHistory(prev => prev.filter(entry => entry.id !== id));
+              toast({ title: "Entry Cleared", description: "The meal entry has been removed from your history."});
+            }}
+            onClearAllHistory={() => {
+              setHistory([]);
+              toast({ title: "History Cleared", description: "All meal entries have been removed."});
+            }}
+          />
+        )}
+
+        {/* Smart Insights Placeholder */}
+        <Card className="shadow-lg rounded-xl overflow-hidden bg-card">
+          <CardHeader className="pb-3 pt-4 px-4">
+            <CardTitle className="flex items-center text-md font-semibold text-indigo-500">
+              <Brain className="h-5 w-5 mr-2" />
+              Smart Insights
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <p className="text-sm text-muted-foreground">
+              You're doing great! Your average calorie intake this week is consistent.
+              Consider adding more fiber from fruits.
+            </p>
+            <Button variant="link" className="p-0 h-auto text-sm text-primary mt-2">
+              Learn More <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </CardContent>
+        </Card>
+
       </main>
       <footer className="py-6 text-center text-sm text-muted-foreground border-t border-border/60 bg-card mt-auto">
         © {new Date().getFullYear()} calorietracker.ai. Snap, Track, Thrive!
