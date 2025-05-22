@@ -2,21 +2,43 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import Link from 'next/link';
 import { AppHeader } from '@/components/layout/app-header';
 import useLocalStorage from '@/hooks/use-local-storage';
-import type { UserProfile, CalorieLogEntry } from '@/lib/types';
-import { USER_PROFILE_STORAGE_KEY, HISTORY_STORAGE_KEY } from '@/lib/constants';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import type { UserProfile, CalorieLogEntry, Gender, ActivityLevel } from '@/lib/types';
+import { USER_PROFILE_STORAGE_KEY, HISTORY_STORAGE_KEY, GOAL_STORAGE_KEY, DEFAULT_DAILY_GOAL } from '@/lib/constants';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format, parseISO, isToday, isYesterday } from 'date-fns';
-import { UserCircle, CalendarDays, Zap, Beef, Wheat, CookingPot, ListChecks, Utensils, Loader2 } from 'lucide-react';
-import { genderLabels, activityLevelLabels } from '@/lib/types'; 
+import { UserCircle, CalendarDays, Zap, Beef, Wheat, CookingPot, ListChecks, Utensils, Loader2, Pencil, Save, Ban } from 'lucide-react';
+import { genderLabels, activityLevelLabels, GENDERS, ACTIVITY_LEVELS } from '@/lib/types'; 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { calculateBMR } from '@/lib/health-utils';
+import { cn } from '@/lib/utils';
 
 
 interface GroupedHistoryEntry {
@@ -34,17 +56,54 @@ interface ProfilePageProps {
   searchParams?: { [key: string]: string | string[] | undefined };
 }
 
-export default function ProfilePage(props: ProfilePageProps) {
-  // const searchParams = props.searchParams; // Access if needed
+const profileFormSchema = z.object({
+  age: z.coerce.number().int().positive({ message: "Age must be a positive number." }).min(1, "Age is required."),
+  gender: z.enum(GENDERS, { required_error: "Gender is required." }),
+  weightKg: z.coerce.number().positive({ message: "Weight must be a positive number." }).min(1, "Weight is required."),
+  heightCm: z.coerce.number().int().positive({ message: "Height must be a positive number." }).min(1, "Height is required."),
+  activityLevel: z.enum(ACTIVITY_LEVELS, { required_error: "Activity level is required." }),
+});
 
+type ProfileFormValues = z.infer<typeof profileFormSchema>;
+
+
+export default function ProfilePage(props: ProfilePageProps) {
   const [clientReady, setClientReady] = useState(false);
   const [userProfile, setUserProfile, isProfileInitialized] = useLocalStorage<UserProfile | null>(USER_PROFILE_STORAGE_KEY, null);
   const [history, setHistory, isHistoryInitialized] = useLocalStorage<CalorieLogEntry[]>(HISTORY_STORAGE_KEY, []);
+  const [_dailyGoalCalories, setDailyGoalCalories, isGoalInitialized] = useLocalStorage<number>(GOAL_STORAGE_KEY, DEFAULT_DAILY_GOAL);
+  
   const [groupedHistory, setGroupedHistory] = useState<GroupedHistoryEntry[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const { toast } = useToast();
+
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: userProfile || {
+      age: 0, // zod coerce will handle initial undefined for number conversion
+      gender: undefined,
+      weightKg: 0,
+      heightCm: 0,
+      activityLevel: undefined,
+    },
+  });
 
   useEffect(() => {
     setClientReady(true);
   }, []);
+
+  useEffect(() => {
+    if (isEditing && userProfile) {
+      form.reset({
+        age: userProfile.age,
+        gender: userProfile.gender,
+        weightKg: userProfile.weightKg,
+        heightCm: userProfile.heightCm,
+        activityLevel: userProfile.activityLevel,
+      });
+    }
+  }, [isEditing, userProfile, form]);
+
 
   useEffect(() => {
     if (!clientReady || !isHistoryInitialized) return;
@@ -85,8 +144,19 @@ export default function ProfilePage(props: ProfilePageProps) {
 
   }, [history, isHistoryInitialized, clientReady]);
 
+  const onSubmit = (data: ProfileFormValues) => {
+    const updatedProfile = data as UserProfile;
+    setUserProfile(updatedProfile);
+    setDailyGoalCalories(calculateBMR(updatedProfile));
+    setIsEditing(false);
+    toast({
+      title: "Profile Updated!",
+      description: "Your information has been successfully saved.",
+      variant: "default",
+    });
+  };
 
-  if (!clientReady || !isProfileInitialized || !isHistoryInitialized) { 
+  if (!clientReady || !isProfileInitialized || !isHistoryInitialized || !isGoalInitialized) { 
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background z-50">
         <div className="flex flex-col items-center">
@@ -97,7 +167,7 @@ export default function ProfilePage(props: ProfilePageProps) {
     );
   }
   
-  if (!userProfile) {
+  if (!userProfile && clientReady) { // Ensure clientReady before showing this
      return (
       <div className="flex flex-col min-h-screen bg-background font-sans">
         <AppHeader />
@@ -128,7 +198,7 @@ export default function ProfilePage(props: ProfilePageProps) {
         <div className="space-y-6 md:space-y-8">
           {/* User Profile Card */}
           <Card className="shadow-xl overflow-hidden">
-            <CardHeader className="bg-muted/30 p-5 md:p-6">
+            <CardHeader className="bg-muted/30 p-5 md:p-6 flex flex-row items-center justify-between">
               <div className="flex items-center gap-4">
                 <Avatar className="h-16 w-16 md:h-20 md:w-20 border-2 border-primary">
                   <AvatarFallback className="bg-primary/20 text-primary">
@@ -136,32 +206,155 @@ export default function ProfilePage(props: ProfilePageProps) {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <CardTitle className="text-2xl md:text-3xl font-semibold">My Profile</CardTitle>
-                  <CardDescription className="text-sm md:text-base">Your personal health snapshot.</CardDescription>
+                  <CardTitle className="text-2xl md:text-3xl font-semibold">
+                    {isEditing ? "Edit Profile" : "My Profile"}
+                  </CardTitle>
+                  <CardDescription className="text-sm md:text-base">
+                    {isEditing ? "Update your personal details below." : "Your personal health snapshot."}
+                  </CardDescription>
                 </div>
               </div>
+              {!isEditing ? (
+                <Button variant="outline" onClick={() => setIsEditing(true)} aria-label="Edit profile">
+                  <Pencil className="mr-2 h-4 w-4" /> Edit
+                </Button>
+              ) : (
+                <Button variant="ghost" onClick={() => setIsEditing(false)} aria-label="Cancel editing">
+                  <Ban className="mr-2 h-4 w-4" /> Cancel
+                </Button>
+              )}
             </CardHeader>
-            <CardContent className="p-5 md:p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 text-sm">
-              <div className="space-y-1 p-3 bg-background rounded-lg border border-border/70 shadow-sm">
-                <p className="text-muted-foreground">Age</p>
-                <p className="font-semibold text-lg">{userProfile.age} years</p>
-              </div>
-              <div className="space-y-1 p-3 bg-background rounded-lg border border-border/70 shadow-sm">
-                <p className="text-muted-foreground">Gender</p>
-                <p className="font-semibold text-lg capitalize">{genderLabels[userProfile.gender] || userProfile.gender.replace(/_/g, ' ')}</p>
-              </div>
-              <div className="space-y-1 p-3 bg-background rounded-lg border border-border/70 shadow-sm">
-                <p className="text-muted-foreground">Weight</p>
-                <p className="font-semibold text-lg">{userProfile.weightKg} kg</p>
-              </div>
-              <div className="space-y-1 p-3 bg-background rounded-lg border border-border/70 shadow-sm">
-                <p className="text-muted-foreground">Height</p>
-                <p className="font-semibold text-lg">{userProfile.heightCm} cm</p>
-              </div>
-              <div className="space-y-1 p-3 bg-background rounded-lg border border-border/70 shadow-sm col-span-1 sm:col-span-2 md:col-span-1">
-                <p className="text-muted-foreground">Activity Level</p>
-                <p className="font-semibold text-lg capitalize">{activityLevelLabels[userProfile.activityLevel] || userProfile.activityLevel.replace(/_/g, ' ')}</p>
-              </div>
+            <CardContent className="p-5 md:p-6">
+              {isEditing ? (
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="age"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Age</FormLabel>
+                            <FormControl>
+                              <Input type="number" placeholder="Your age" {...field} value={field.value ?? ''} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="gender"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Gender</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select gender" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {GENDERS.map((gender) => (
+                                  <SelectItem key={gender} value={gender}>
+                                    {genderLabels[gender]}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="weightKg"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Weight (kg)</FormLabel>
+                            <FormControl>
+                              <Input type="number" placeholder="e.g., 70" {...field} step="0.1" value={field.value ?? ''} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="heightCm"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Height (cm)</FormLabel>
+                            <FormControl>
+                              <Input type="number" placeholder="e.g., 175" {...field} value={field.value ?? ''} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="activityLevel"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Activity Level</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select activity level" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {ACTIVITY_LEVELS.map((level) => (
+                                <SelectItem key={level} value={level}>
+                                  {activityLevelLabels[level]}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <CardFooter className="p-0 pt-4">
+                      <Button type="submit" className="w-full sm:w-auto" size="lg" disabled={form.formState.isSubmitting}>
+                        <Save className="mr-2 h-4 w-4" />
+                        {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
+                      </Button>
+                    </CardFooter>
+                  </form>
+                </Form>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 text-sm">
+                  {userProfile && (
+                    <>
+                      <div className="space-y-1 p-3 bg-background rounded-lg border border-border/70 shadow-sm">
+                        <p className="text-muted-foreground">Age</p>
+                        <p className="font-semibold text-lg">{userProfile.age} years</p>
+                      </div>
+                      <div className="space-y-1 p-3 bg-background rounded-lg border border-border/70 shadow-sm">
+                        <p className="text-muted-foreground">Gender</p>
+                        <p className="font-semibold text-lg capitalize">{genderLabels[userProfile.gender] || userProfile.gender.replace(/_/g, ' ')}</p>
+                      </div>
+                      <div className="space-y-1 p-3 bg-background rounded-lg border border-border/70 shadow-sm">
+                        <p className="text-muted-foreground">Weight</p>
+                        <p className="font-semibold text-lg">{userProfile.weightKg} kg</p>
+                      </div>
+                      <div className="space-y-1 p-3 bg-background rounded-lg border border-border/70 shadow-sm">
+                        <p className="text-muted-foreground">Height</p>
+                        <p className="font-semibold text-lg">{userProfile.heightCm} cm</p>
+                      </div>
+                      <div className="space-y-1 p-3 bg-background rounded-lg border border-border/70 shadow-sm col-span-1 sm:col-span-2 md:col-span-1">
+                        <p className="text-muted-foreground">Activity Level</p>
+                        <p className="font-semibold text-lg capitalize">{activityLevelLabels[userProfile.activityLevel] || userProfile.activityLevel.replace(/_/g, ' ')}</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -176,20 +369,20 @@ export default function ProfilePage(props: ProfilePageProps) {
                     </div>
                 </div>
             </CardHeader>
-            <CardContent className="p-0 flex flex-col">
-              {!isHistoryInitialized || !clientReady ? ( // Should already be handled by page-level check, but good for robustness
-                 <div className="py-10 px-5 text-center text-muted-foreground">
+             <CardContent className={cn("p-0 flex flex-col", { "min-h-[200px]": groupedHistory.length > 0 })}>
+              {!isHistoryInitialized || !clientReady ? (
+                 <div className="py-10 px-5 text-center text-muted-foreground flex-1 flex flex-col items-center justify-center">
                   <ListChecks className="h-12 w-12 mx-auto mb-3 text-muted-foreground/70 animate-pulse" />
                   <p className="font-medium">Loading Meal History...</p>
                 </div>
               ) : groupedHistory.length === 0 ? (
-                <div className="py-10 px-5 text-center text-muted-foreground">
+                <div className="py-10 px-5 text-center text-muted-foreground flex-1 flex flex-col items-center justify-center">
                   <Utensils className="h-12 w-12 mx-auto mb-3 text-muted-foreground/70" />
                   <p className="font-medium">No meal history yet.</p>
                   <p className="text-sm">Start tracking your meals on the homepage!</p>
                 </div>
               ) : (
-                <ScrollArea className="max-h-[70vh] flex-1 min-h-0"> 
+                <ScrollArea className="flex-1" style={{maxHeight: '70vh', minHeight: '200px'}}> 
                   <Accordion type="multiple" className="w-full">
                     {groupedHistory.map((group, index) => (
                       <AccordionItem value={`day-${index}`} key={`day-${index}`} className="border-b last:border-b-0">
@@ -227,7 +420,7 @@ export default function ProfilePage(props: ProfilePageProps) {
                                 </CardHeader>
                                 <CardContent className="p-3 md:p-4 text-xs">
                                   <p className="font-medium text-foreground mb-1.5">Items ({entry.mealItems.length}):</p>
-                                  <ul className="space-y-1 list-inside list-disc pl-1 marker:text-primary/70 max-h-40 overflow-y-auto pr-2">
+                                   <ul className="space-y-1 list-inside list-disc pl-1 marker:text-primary/70 max-h-40 overflow-y-auto pr-2">
                                     {entry.mealItems.map((item, itemIndex) => (
                                       <li key={itemIndex} className="capitalize text-muted-foreground">
                                         {item.name}

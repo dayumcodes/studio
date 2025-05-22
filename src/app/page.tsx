@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -24,6 +25,7 @@ import {
   DEFAULT_DAILY_GOAL,
 } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+import { calculateBMR } from '@/lib/health-utils';
 
 interface SummaryCardProps {
   title: string;
@@ -66,8 +68,6 @@ interface HomePageProps {
 }
 
 export default function HomePage(props: HomePageProps) {
-  // const searchParams = props.searchParams; // Access if needed
-
   const [clientReady, setClientReady] = useState(false);
 
   const [currentMealData, setCurrentMealData] = useState<FoodItem[] | null>(null);
@@ -107,26 +107,6 @@ export default function HomePage(props: HomePageProps) {
     });
   };
   
-  const calculateBMR = (profile: UserProfile): number => {
-    let bmr: number;
-    if (profile.gender === 'male') {
-      bmr = 88.362 + (13.397 * profile.weightKg) + (4.799 * profile.heightCm) - (5.677 * profile.age);
-    } else { 
-      bmr = 447.593 + (9.247 * profile.weightKg) + (3.098 * profile.heightCm) - (4.330 * profile.age);
-    }
-
-    const activityMultipliers: Record<UserProfile['activityLevel'], number> = {
-      sedentary: 1.2,
-      lightly_active: 1.375,
-      moderately_active: 1.55,
-      very_active: 1.725,
-    };
-    
-    const tdee = bmr * (activityMultipliers[profile.activityLevel] || 1.2);
-    return Math.round(tdee > 1000 ? tdee : DEFAULT_DAILY_GOAL); 
-  };
-
-
   const handleMealDataProcessed = (data: FoodItem[]) => {
     setCurrentMealData(data);
     setIsLoadingMeal(false);
@@ -351,3 +331,4 @@ export default function HomePage(props: HomePageProps) {
     </div>
   );
 }
+
