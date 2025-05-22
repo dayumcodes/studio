@@ -8,10 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Camera, AlertCircle, UploadCloud, CameraOff, ImagePlus, Video, CheckCircle2 } from 'lucide-react';
+import { Loader2, Camera, AlertCircle, UploadCloud, CameraOff, ImagePlus, Video, CheckCircle2, RefreshCw } from 'lucide-react';
 import { recognizeFood, type RecognizeFoodInput, type RecognizeFoodOutput } from '@/ai/flows/food-recognition';
-import { calculateCalories, type CalculateCaloriesInput, type CalculateCaloriesOutput } from '@/ai/flows/calorie-calculation';
-import type { FoodItem } from '@/lib/types';
+import { calculateCalories, type CalculateCaloriesInput, type CalculateCaloriesOutput, type FoodItem as CalculatedFoodItem } from '@/ai/flows/calorie-calculation'; // Renamed to avoid conflict
+import type { FoodItem } from '@/lib/types'; // This is the app's FoodItem type
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 
@@ -52,14 +52,12 @@ export function FoodRecognitionForm({
         setHasCameraPermission(null);
 
         try {
-          // First try to get the environment-facing camera
           let streamAttempt = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
           activeStreamInstance = streamAttempt;
           setStream(streamAttempt);
 
           if (videoRef.current) {
             videoRef.current.srcObject = streamAttempt;
-            // Use a promise for onloadedmetadata to ensure play() is called after metadata is loaded
             await new Promise<void>((resolve, reject) => {
               if (!videoRef.current) {
                 reject(new Error("Video ref became null"));
@@ -68,8 +66,7 @@ export function FoodRecognitionForm({
               videoRef.current.onloadedmetadata = () => {
                 videoRef.current?.play().then(resolve).catch(playError => {
                   console.warn("Video play failed:", playError);
-                  // Resolve even if play fails to not block indefinitely, error will be visual
-                  resolve(); 
+                  resolve();
                 });
               };
               videoRef.current.onerror = (e) => {
@@ -79,7 +76,7 @@ export function FoodRecognitionForm({
             });
           }
           setHasCameraPermission(true);
-          setError(null); // Clear previous errors on success
+          setError(null);
         } catch (err) {
           console.error("Error accessing primary (environment) camera:", err);
           let message = "Could not access the camera. Please check permissions.";
@@ -91,11 +88,10 @@ export function FoodRecognitionForm({
               message = "Camera permission denied. Please enable it in your browser settings.";
             } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
               message = "Camera is already in use or a hardware error occurred.";
-            } else if (err.name === "OverconstrainedError" || (err.message && err.message.toLowerCase().includes("overconstrained"))) {
+            } else if (err.name === "OverconstrainedError" || (err instanceof Error && err.message && err.message.toLowerCase().includes("overconstrained"))) {
               message = "Rear camera might not be accessible, trying default camera."
               toast({ variant: 'default', title: 'Camera Info', description: message });
               
-              // Fallback to any available camera
               try {
                 const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
                 activeStreamInstance = fallbackStream;
@@ -120,7 +116,7 @@ export function FoodRecognitionForm({
                   });
                 }
                 setHasCameraPermission(true);
-                setError(null); // Clear previous errors on fallback success
+                setError(null);
                 setIsLoadingStream(false);
                 return; 
               } catch (fallbackErr) {
@@ -132,7 +128,7 @@ export function FoodRecognitionForm({
           setHasCameraPermission(false);
           setError(message);
           toast({ variant: 'destructive', title: 'Camera Access Error', description: message });
-          setCurrentMode('upload'); // Revert to upload mode on critical error
+          setCurrentMode('upload'); 
         } finally {
           setIsLoadingStream(false);
         }
@@ -151,7 +147,7 @@ export function FoodRecognitionForm({
         }
         setStream(null); 
       };
-    } else { // currentMode is 'upload'
+    } else { 
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
         setStream(null);
@@ -163,8 +159,7 @@ export function FoodRecognitionForm({
       }
       setHasCameraPermission(null); 
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentMode]); // Removed clearCurrentMeal and toast from deps as they are stable
+  }, [currentMode, toast]); // Removed clearCurrentMeal as it's called explicitly now
 
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     setError(null);
@@ -208,9 +203,9 @@ export function FoodRecognitionForm({
       const context = canvas.getContext('2d');
       if (context) {
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUri = canvas.toDataURL('image/jpeg', 0.9); // Use JPEG for better compatibility, 0.9 quality
+        const dataUri = canvas.toDataURL('image/jpeg', 0.9); 
         setImagePreview(dataUri);
-        setImageFile(null); // Clear any uploaded file
+        setImageFile(null); 
         clearCurrentMeal();
         setError(null);
         toast({ title: "Photo Captured!", description: "Review your photo below or retake.", variant: "default" });
@@ -219,6 +214,15 @@ export function FoodRecognitionForm({
       toast({ variant: "destructive", title: "Capture Failed", description: "Camera stream not available or not ready."});
     }
   }, [stream, clearCurrentMeal, toast]);
+
+  const handleRetake = useCallback(() => {
+    setImagePreview(null);
+    setImageFile(null); 
+    setError(null);
+    clearCurrentMeal();
+    toast({ title: "Photo Discarded", description: "Camera is ready for a new shot.", variant: "default" });
+  }, [clearCurrentMeal, toast]);
+
 
   const handleSubmit = async () => {
     if (!imagePreview) {
@@ -230,7 +234,7 @@ export function FoodRecognitionForm({
     setError(null);
     setIsRecognizing(true);
     setIsCalculating(false);
-    onProcessingError(''); // Clear previous errors in parent
+    onProcessingError(''); 
 
     try {
       const recognizeInput: RecognizeFoodInput = { photoDataUri: imagePreview };
@@ -245,33 +249,45 @@ export function FoodRecognitionForm({
         return;
       }
       
-      setIsRecognizing(false); // Moved here: recognition done, even if no items
+      setIsRecognizing(false); 
 
       if (!recognitionResult.foodItems || recognitionResult.foodItems.length === 0) {
+        // This condition is problematic as the AI might return quantity along with name
+        // For now, we will assume foodItems are just names from recognition.
+        // Quantity will be handled in calorie calculation if provided by the AI.
         const noItemsMessage = "Could not recognize any specific food items. Try a clearer image or different angle.";
-        setError(noItemsMessage);
-        onProcessingError(noItemsMessage);
-        // No early return here if isFood was true, allow processing of empty items if backend supports
-        // Or, if you want to stop:
-        // toast({ variant: "destructive", title: "No Items Recognized", description: noItemsMessage });
-        // return;
+         setError(noItemsMessage);
+         onProcessingError(noItemsMessage);
+         // If isFood was true, but no items, we still proceed to calorie calculation with empty list
       }
-
 
       setIsCalculating(true);
       const calculateInput: CalculateCaloriesInput = {
-        // Ensure foodItems is an empty array if recognitionResult.foodItems is null/undefined
-        foodItems: (recognitionResult.foodItems || []).map(name => ({ name })) 
+        foodItems: (recognitionResult.foodItems || []).map(itemString => {
+          // Basic parsing if AI returns "name (quantity)" - this is a simplification
+          const match = itemString.match(/^(.*?)\s*\((.*?)\)$/);
+          if (match) {
+            return { name: match[1].trim(), quantity: match[2].trim() };
+          }
+          return { name: itemString.trim() };
+        })
       };
-      const calorieResult: CalculateCaloriesOutput = await calculateCalories(calculateInput);
+      const calorieResult: CalculatedFoodItem[] = await calculateCalories(calculateInput);
+      
+      // Adapt CalculatedFoodItem to app's FoodItem structure
+      const processedMealData: FoodItem[] = calorieResult.map(item => ({
+        name: item.name,
+        quantity: item.quantity, // Assuming quantity is now part of CalculatedFoodItem
+        nutrientInfo: item.nutrientInfo,
+      }));
 
-      onMealDataProcessed(calorieResult);
+      onMealDataProcessed(processedMealData);
 
     } catch (err) {
       console.error("AI processing error:", err);
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred during AI processing.";
       setError(errorMessage);
-      onProcessingError(errorMessage); // Pass full error to parent
+      onProcessingError(errorMessage); 
       toast({ variant: "destructive", title: "Processing Error", description: errorMessage });
     } finally {
       setIsRecognizing(false);
@@ -281,7 +297,7 @@ export function FoodRecognitionForm({
 
   const handleUploadLabelClick = useCallback(() => {
     if (isRecognizing || isCalculating) {
-      return; // Don't trigger if already processing
+      return; 
     }
     fileInputRef.current?.click();
   }, [isRecognizing, isCalculating]);
@@ -291,15 +307,15 @@ export function FoodRecognitionForm({
 
   return (
     <Card className="w-full shadow-xl overflow-hidden">
-      <CardHeader className="bg-muted/30">
-        <CardTitle className="flex items-center gap-3 text-2xl font-semibold">
-          <Camera className="h-8 w-8 text-primary" />
+      <CardHeader className="bg-card">
+        <CardTitle className="flex items-center gap-3 text-2xl font-semibold text-primary">
+          <Camera className="h-8 w-8" />
           Snap Your Meal
         </CardTitle>
-        <CardDescription>Upload an image or use your camera. We'll do the rest!</CardDescription>
+        <CardDescription className="text-muted-foreground">Upload an image or use your camera. We'll do the rest!</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6 p-6">
-        {error && !isLoadingStream && ( // Only show general error if not related to stream loading
+      <CardContent className="space-y-6 p-4 md:p-6">
+        {error && !isLoadingStream && ( 
           <Alert variant="destructive" className="animate-in fade-in-50">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
@@ -314,10 +330,10 @@ export function FoodRecognitionForm({
             onClick={() => {
               setCurrentMode('upload');
               if (imagePreview && !imageFile) setImagePreview(null); 
-              setError(null); // Clear camera-related errors when switching
+              setError(null); 
             }}
             disabled={isLoading && currentMode !== 'upload'}
-            className="py-3 text-base sm:py-6 sm:text-lg transition-all duration-150 ease-in-out"
+            className="py-3 text-base sm:py-4 sm:text-lg transition-all duration-150 ease-in-out rounded-lg"
           >
             <UploadCloud className="mr-2 h-5 w-5" /> Upload
           </Button>
@@ -330,10 +346,10 @@ export function FoodRecognitionForm({
                 setImageFile(null);
                 setImagePreview(null);
               }
-              setError(null); // Clear upload-related errors when switching
+              setError(null); 
             }}
             disabled={isLoading && currentMode !== 'camera'}
-            className="py-3 text-base sm:py-6 sm:text-lg transition-all duration-150 ease-in-out"
+            className="py-3 text-base sm:py-4 sm:text-lg transition-all duration-150 ease-in-out rounded-lg"
           >
             <Video className="mr-2 h-5 w-5" /> Camera
           </Button>
@@ -341,12 +357,12 @@ export function FoodRecognitionForm({
 
         {currentMode === 'camera' ? (
           <div className="space-y-4">
-            <div className="relative aspect-video bg-muted/60 rounded-lg overflow-hidden border-2 border-dashed border-border hover:border-primary transition-colors">
+            <div className="relative aspect-video bg-muted rounded-lg overflow-hidden border-2 border-dashed border-border hover:border-primary transition-colors">
               <video
                 ref={videoRef}
                 className={cn(
                   "w-full h-full object-cover transition-opacity duration-300",
-                  (!stream || isLoadingStream) ? 'opacity-0' : 'opacity-100'
+                  (!stream || isLoadingStream || imagePreview) ? 'opacity-0 absolute -z-10' : 'opacity-100 static z-0' // Hide video if preview shown
                 )}
                 autoPlay
                 muted
@@ -360,8 +376,7 @@ export function FoodRecognitionForm({
                   <p className="text-sm">Please wait a moment.</p>
                 </div>
               )}
-              {!isLoadingStream && !stream && hasCameraPermission === false && (
-                // This specific error is shown if permission was explicitly denied or camera failed critically
+              {!isLoadingStream && !stream && hasCameraPermission === false && !imagePreview &&(
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4 bg-destructive/10">
                     <CameraOff className="h-16 w-16 text-destructive mb-3" />
                     <p className="font-semibold text-destructive text-lg">Camera Access Issue</p>
@@ -369,7 +384,6 @@ export function FoodRecognitionForm({
                 </div>
               )}
               {!isLoadingStream && !stream && hasCameraPermission !== false && !imagePreview && (
-                 // General placeholder before stream starts or if non-critical issue
                  <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground p-4 text-center">
                     <CameraOff className="h-16 w-16 mb-3" />
                     <p className="font-medium">Camera Preview</p>
@@ -377,7 +391,7 @@ export function FoodRecognitionForm({
                 </div>
               )}
                {imagePreview && ( 
-                <div className="absolute inset-0 p-1 bg-background/30 backdrop-blur-sm flex items-center justify-center z-10"> {/* Ensure preview is on top */}
+                <div className="absolute inset-0 p-1 bg-background/30 backdrop-blur-sm flex items-center justify-center z-10">
                   <Image
                     src={imagePreview}
                     alt="Food preview"
@@ -390,26 +404,31 @@ export function FoodRecognitionForm({
             </div>
             <Button
               type="button"
-              onClick={handleCapturePhoto}
-              disabled={isRecognizing || isCalculating || isLoadingStream || !stream || !hasCameraPermission}
-              className="w-full py-3 text-base"
+              onClick={imagePreview ? handleRetake : handleCapturePhoto}
+              disabled={isLoading || isLoadingStream || !stream || !hasCameraPermission}
+              className="w-full py-3 text-base rounded-lg"
               variant="secondary"
             >
-              <Camera className="mr-2 h-5 w-5" /> {imagePreview && currentMode === 'camera' ? 'Retake Photo' : 'Capture Photo'}
+              {imagePreview ? <RefreshCw className="mr-2 h-5 w-5" /> : <Camera className="mr-2 h-5 w-5" />}
+              {imagePreview ? 'Retake Photo' : 'Capture Photo'}
             </Button>
             <canvas ref={canvasRef} className="hidden" aria-hidden="true"></canvas>
           </div>
-        ) : ( // Upload Mode
+        ) : ( 
           <div className="space-y-3">
             <label
               htmlFor="food-image-upload"
               onClick={handleUploadLabelClick}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleUploadLabelClick();}}
+              tabIndex={0}
+              role="button"
               className={cn(
-                "flex flex-col items-center justify-center w-full h-40 md:h-56 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted/80 transition-colors duration-200",
+                "flex flex-col items-center justify-center w-full h-48 md:h-56 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted/80 transition-colors duration-200",
                 imagePreview ? "border-primary/80" : "border-border hover:border-primary/70",
-                (isRecognizing || isCalculating) ? "cursor-not-allowed opacity-70" : ""
+                (isLoading) ? "cursor-not-allowed opacity-70" : ""
               )}
-              aria-disabled={isRecognizing || isCalculating}
+              aria-disabled={isLoading}
+              aria-label="Upload food image"
             >
               {imagePreview ? (
                 <div className="relative w-full h-full p-2">
@@ -434,23 +453,23 @@ export function FoodRecognitionForm({
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 onChange={handleImageChange}
-                disabled={isRecognizing || isCalculating}
+                disabled={isLoading}
                 className="hidden"
               />
             </label>
              {imagePreview && (
-              <Button variant="outline" size="sm" onClick={() => { setImagePreview(null); setImageFile(null); if(fileInputRef.current) fileInputRef.current.value = ""; clearCurrentMeal(); setError(null); }} className="w-full" disabled={isLoading}>
+              <Button variant="outline" size="sm" onClick={() => { setImagePreview(null); setImageFile(null); if(fileInputRef.current) fileInputRef.current.value = ""; clearCurrentMeal(); setError(null); }} className="w-full rounded-lg" disabled={isLoading}>
                 <ImagePlus className="mr-2 h-4 w-4" /> Change Image
               </Button>
             )}
           </div>
         )}
       </CardContent>
-      <CardFooter className="p-6 bg-muted/30">
+      <CardFooter className="p-4 md:p-6 bg-card border-t">
         <Button
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="w-full py-3 text-lg font-semibold transition-all duration-150 ease-in-out transform hover:scale-[1.02] active:scale-100"
+          className="w-full py-3 text-lg font-semibold transition-all duration-150 ease-in-out transform hover:scale-[1.01] active:scale-100 rounded-lg"
           aria-label="Process food image and get nutritional info"
           size="lg"
         >
